@@ -4,3 +4,6 @@ Please visit https://docs.google.com/document/d/1NNl6HVrSsu0wnXz9jT7q-wDegnqZG6B
 
 # How to run
 To run the program please clone the project and run Manager.py
+Alternatively, run Gui.py
+
+On Mac, download the dmg, and open it to open a full standalone app
