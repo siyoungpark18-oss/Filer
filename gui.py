@@ -119,6 +119,14 @@ class App:
                          insertbackground=t["log_fg"])
 
 
+  def _on_scroll(self, first, last):
+      self._scrollbar.set(first, last)
+      if float(first) <= 0.0 and float(last) >= 1.0:
+          self._scrollbar.pack_forget()
+      else:
+          self._scrollbar.pack(side='right', fill='y')
+
+
   def _apply_to_widget(self, widget, t):
       if isinstance(widget, tk.Toplevel):
           return
@@ -392,8 +400,21 @@ NOTES
       self._right = tk.Frame(self.root)
       self._right.pack(side='left', fill='both', expand=True, padx=(0, 10), pady=10)
       tk.Label(self._right, text="Log", font=('', 11, 'bold')).pack(anchor='w')
-      self.log = scrolledtext.ScrolledText(self._right, state='disabled', wrap='word', font=('Courier', 11))
-      self.log.pack(fill='both', expand=True)
+
+
+      log_frame = tk.Frame(self._right)
+      log_frame.pack(fill='both', expand=True)
+
+
+      self._scrollbar = tk.Scrollbar(log_frame)
+      self._scrollbar.pack(side='right', fill='y')
+
+
+      self.log = tk.Text(log_frame, state='disabled', wrap='word', font=('Courier', 11),
+                         yscrollcommand=self._on_scroll)
+      self.log.pack(side='left', fill='both', expand=True)
+      self._scrollbar.config(command=self.log.yview)
+      self._scrollbar.pack_forget()
 
 
       self._rebuild_buttons()
