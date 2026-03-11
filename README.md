@@ -1,6 +1,3 @@
-# Filer is a File Manager for Modern MacOS, Windows, and Linux
-It's open source and built entirely on python
-
 # How to run
 To run the program please clone the project and **Gui.py**
 **On Mac, download the dmg, and open it to open a full standalone app**
