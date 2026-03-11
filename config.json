@@ -1,11 +1,4 @@
 {
   "input": "./resources",
-  "spam": "./resources",
-  "folders_to_pdf": "./resources",
-  "images_to_pdf": "./resources",
-  "sort_by_number": "./resources",
-  "mass_rename": "./resources",
-  "combine_image_sets": "./resources",
-  "image_converter": "./resources",
-  "pdf_splitter": "./resources"
+  "output": "./resources",
 }
