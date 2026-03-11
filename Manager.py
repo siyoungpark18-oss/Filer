@@ -1,715 +1,1011 @@
-import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox, filedialog
+from PIL import Image
 from pathlib import Path
-import threading
-import queue
-import sys
-import io
+import re
 import shutil
+import img2pdf
+import json
+import hashlib
+import time
+import psutil
+from pypdf import PdfReader, PdfWriter
 
 
 
 
-from Manager import (
-  load_config, save_config, get_input,
-  folders_to_pdf, images_to_pdf, folder_renamer, file_renamer,
-  combine_image_sets, image_converter, pdf_splitter, pdf_combiner,
-  pdf_to_images, status, find_duplicates, DEFAULTS, SENTINEL
-)
+CONFIG_PATH = Path.home() / ".file_folder_manager" / "config.json"
 
 
+SENTINEL = "\x00CANCELLED\x00"
 
 
-THEMES = {
-   "light": {
-       "bg":        "#f0f0f0",
-       "fg":        "#000000",
-       "log_bg":    "#ffffff",
-       "log_fg":    "#000000",
-       "entry_bg":  "#ffffff",
-       "entry_fg":  "#000000",
-       "btn_bg":    "#e0e0e0",
-       "btn_fg":    "#000000",
-       "hint_fg":   "gray",
-       "hover":     "#d0d0d0",
-   },
-   "dark": {
-       "bg":        "#1e1e1e",
-       "fg":        "#d4d4d4",
-       "log_bg":    "#252526",
-       "log_fg":    "#d4d4d4",
-       "entry_bg":  "#3c3c3c",
-       "entry_fg":  "#d4d4d4",
-       "btn_bg":    "#3c3c3c",
-       "btn_fg":    "#d4d4d4",
-       "hint_fg":   "#888888",
-       "hover":     "#4e4e4e",
-   },
+DEFAULTS = {
+   "input":            str(Path.home() / "Downloads"),
+   "output":           str(Path.home() / "Downloads"),
+   "default_sort":     "ask",
+   "default_dpi":      "ask",
+   "default_img_fmt":  "ask",
+   "auto_clear_input": False,
+   "replace_output":   True,
+   "sort_output":      False,
+   "hotkey_continue":  "Return",
+   "hotkey_cancel":    "Escape",
+   "throttle_cpu":     80,
+   "throttle_mem":     80,
 }
 
 
 
 
-class LogRedirect(io.TextIOBase):
-  def __init__(self, log_widget):
-      self.log = log_widget
+def load_config():
+   CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+   if CONFIG_PATH.exists():
+       with open(CONFIG_PATH, 'r') as f:
+           data = json.load(f)
+       for k, v in DEFAULTS.items():
+           data.setdefault(k, v)
+       return data
+   return DEFAULTS.copy()
 
 
-  def write(self, msg):
-      if msg.strip():
-          self.log.configure(state='normal')
-          self.log.insert(tk.END, msg if msg.endswith('\n') else msg + '\n')
-          self.log.see(tk.END)
-          self.log.configure(state='disabled')
-      return len(msg)
 
 
-  def flush(self):
-      pass
+def save_config(config):
+   CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+   with open(CONFIG_PATH, 'w') as f:
+       json.dump(config, f, indent=2)
 
 
 
 
-input_queue = queue.Queue()
-result_queue = queue.Queue()
+def get_input(config):
+   return Path(config["input"]) / "Input"
 
 
 
 
-def thread_safe_input(prompt=""):
-  input_queue.put(prompt)
-  return result_queue.get()
+def get_output(config, operation, run_name):
+   if config.get("sort_output", False):
+       folder = Path(config["output"]) / "output" / operation / run_name
+   else:
+       folder = Path(config["output"]) / "output" / run_name
+   if config.get("replace_output", True) and folder.exists():
+       shutil.rmtree(folder)
+   folder.mkdir(parents=True, exist_ok=True)
+   return folder
 
 
 
 
-def patch_input():
-  import builtins
-  builtins.input = thread_safe_input
+def do_auto_clear(config):
+   if config.get("auto_clear_input"):
+       src = get_input(config)
+       if src.exists():
+           count = sum(1 for _ in src.iterdir())
+           for item in src.iterdir():
+               try:
+                   shutil.rmtree(item) if item.is_dir() else item.unlink()
+               except Exception as e:
+                   print(f"  Auto-clear failed: {item.name}: {e}")
+           print(f"  Input cleared ({count} item(s) removed).")
 
 
 
 
-class App:
-  def __init__(self, root):
-      self.root = root
-      self.root.title("File & Folder Manager")
-      self.root.resizable(True, True)
-      self.config = load_config()
-      self.cancel_event = threading.Event()
-      self._dark = self.config.get("dark_mode", False)
-      patch_input()
-      self._build_ui()
-      self._apply_theme()
-      sys.stdout = LogRedirect(self.log)
-      sys.stderr = LogRedirect(self.log)
-      self._poll_input()
+def resolve_sort(config):
+   mode = config.get("default_sort", "ask")
+   if mode == "natural":
+       return True
+   if mode == "none":
+       return False
+   raw = input("Sort order? 1=Natural  2=None (default 1): ").strip()
+   if raw == SENTINEL:
+       return None
+   return raw != "2"
 
 
-  def _theme(self):
-      return THEMES["dark"] if self._dark else THEMES["light"]
 
 
-  def _apply_theme(self):
-      t = self._theme()
-      self.root.configure(bg=t["bg"])
-      for widget in [self.root, self._btn_frame, self._right]:
-          self._apply_to_widget(widget, t)
-      self.log.configure(bg=t["log_bg"], fg=t["log_fg"],
-                         insertbackground=t["log_fg"])
+def throttle_if_needed(config):
+   cpu_limit = config.get("throttle_cpu", 80)
+   mem_limit = config.get("throttle_mem", 80)
+   if cpu_limit == 0 and mem_limit == 0:
+       return
+   while True:
+       cpu = psutil.cpu_percent(interval=0.2)
+       mem = psutil.virtual_memory().percent
+       if cpu <= cpu_limit and mem <= mem_limit:
+           break
+       time.sleep(0.5)
 
 
-  def _apply_to_widget(self, widget, t):
-      if isinstance(widget, tk.Toplevel):
-          return
-      cls = widget.winfo_class()
-      try:
-          if cls in ("Frame",):
-              widget.configure(bg=t["bg"])
-          elif cls in ("Label",):
-              widget.configure(bg=t["bg"], fg=t["fg"])
-          elif cls in ("Button",):
-              widget.configure(bg=t["btn_bg"], fg=t["btn_fg"],
-                               activebackground=t["bg"], activeforeground=t["fg"])
-          elif cls in ("Entry",):
-              widget.configure(bg=t["entry_bg"], fg=t["entry_fg"],
-                               insertbackground=t["entry_fg"])
-          elif cls in ("Text", "ScrolledText"):
-              widget.configure(bg=t["log_bg"], fg=t["log_fg"])
-      except tk.TclError:
-          pass
-      for child in widget.winfo_children():
-          self._apply_to_widget(child, t)
 
 
-  def _toggle_dark(self):
-      self._dark = not self._dark
-      self.config["dark_mode"] = self._dark
-      save_config(self.config)
-      self._apply_theme()
-      self._dark_btn.configure(text="☀" if self._dark else "🌙")
+def natural_sort_key(name):
+   return [int(c) if c.isdigit() else c.lower() for c in re.split(r'(\d+)', name)]
 
 
-  def _poll_input(self):
-      try:
-          prompt = input_queue.get_nowait()
-          self._show_inline_input(prompt)
-      except queue.Empty:
-          pass
-      self.root.after(50, self._poll_input)
 
 
-  def _show_inline_input(self, prompt):
-      if hasattr(self, '_input_frame') and self._input_frame.winfo_exists():
-          return
+def collect_image_paths(folder, image_extensions):
+   paths = []
+   items = sorted(folder.iterdir(), key=lambda x: natural_sort_key(x.name))
+   for item in items:
+       if item.is_file() and item.suffix.lower() in image_extensions:
+           paths.append(item)
+       elif item.is_dir():
+           sub = collect_image_paths(item, image_extensions)
+           paths.extend(sub)
+           if sub:
+               print(f"    {item.name}/  →  {len(sub)} image(s)")
+   return paths
 
 
-      t = self._theme()
-      self._input_frame = tk.Frame(self._right, bg=t["bg"])
-      self._input_frame.pack(fill='x', pady=(4, 0))
 
 
-      if prompt.strip():
-          print(f"{prompt.strip()}")
+def save_pdf(image_paths, output_path):
+   if not image_paths:
+       print("  No images to save.")
+       return
+   print(f"  Converting {len(image_paths)} images → PDF...")
+   with open(output_path, 'wb') as f:
+       f.write(img2pdf.convert([str(p) for p in image_paths]))
+   size_mb = output_path.stat().st_size / (1024 * 1024)
+   print(f"  Saved: {output_path.name}  ({size_mb:.1f} MB)")
 
 
-      is_pick = "Waiting for key" in prompt
 
 
-      if is_pick:
-          hint = "  (Enter = Files  •  Space = Folder  •  Escape = Cancel)"
-      else:
-          continue_key = self.config.get("hotkey_continue", "Return")
-          cancel_key   = self.config.get("hotkey_cancel",   "Delete")
-          hint = f"  ({continue_key} = confirm  •  {cancel_key} = cancel)"
+def _get_run_name(prompt="Run name (Enter to skip): "):
+   val = input(prompt).strip()
+   if val == SENTINEL:
+       return None
+   return val or "Result"
 
 
-      tk.Label(self._input_frame, text=hint, fg=t["hint_fg"],
-               bg=t["bg"], font=('Courier', 10)).pack(side='left')
 
 
-      var = tk.StringVar()
-      entry = tk.Entry(self._input_frame, textvariable=var, font=('Courier', 11),
-                       bg=t["entry_bg"], fg=t["entry_fg"],
-                       insertbackground=t["entry_fg"])
-      entry.pack(side='left', fill='x', expand=True, padx=4)
-      entry.focus_set()
+def _cancel():
+   print("  Cancelled.")
+   print("")
 
 
-      if is_pick:
-          def pick_files(e=None):
-              self._input_frame.destroy()
-              result_queue.put("FILES")
-          def pick_folder(e=None):
-              self._input_frame.destroy()
-              result_queue.put("FOLDER")
-          def cancel(e=None):
-              self._input_frame.destroy()
-              result_queue.put("CANCEL")
-          entry.bind("<Return>", pick_files)
-          entry.bind("<space>",  pick_folder)
-          entry.bind("<Escape>", cancel)
-      else:
-          continue_key = self.config.get("hotkey_continue", "Return")
-          cancel_key   = self.config.get("hotkey_cancel",   "Delete")
 
 
-          def confirm(e=None):
-              val = var.get()
-              self._input_frame.destroy()
-              result_queue.put(val)
+def folders_to_pdf(config, cancel=None):
+   src = get_input(config)
+   src.mkdir(parents=True, exist_ok=True)
 
 
-          def cancel(e=None):
-              self._input_frame.destroy()
-              result_queue.put(SENTINEL)
+   print("Folders to PDF")
+   print(f"  Input:  {src}")
+   run_name = _get_run_name()
+   if run_name is None:
+       return _cancel()
+   out = get_output(config, "folders to pdf", run_name)
+   print(f"  Output: {out}")
 
 
-          entry.bind(f"<{continue_key}>", confirm)
-          entry.bind(f"<{cancel_key}>",   cancel)
+   image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'}
+   folders = sorted([f for f in src.iterdir() if f.is_dir()],
+                    key=lambda x: natural_sort_key(x.name))
 
 
-  def _show_help(self):
-      win = tk.Toplevel(self.root)
-      win.title("Help")
-      win.geometry("600x620")
-      win.resizable(False, False)
+   if not folders:
+       print("  No folders found in Input!")
+       print("")
+       return
 
 
-      text = scrolledtext.ScrolledText(win, wrap='word', font=('Courier', 11),
-                                       padx=10, pady=10)
-      text.pack(fill='both', expand=True)
+   print(f"  Found {len(folders)} folder(s). Scanning...")
+   all_paths = []
+   for folder in folders:
+       if cancel and cancel.is_set():
+           print("  Cancelled.")
+           print("")
+           return
+       throttle_if_needed(config)
+       paths = collect_image_paths(folder, image_extensions)
+       all_paths.extend(paths)
+       print(f"  [{folder.name}]  {len(paths)} image(s)")
 
 
-      help_text = """FILE & FOLDER MANAGER — HELP
+   print(f"  Total: {len(all_paths)} images across {len(folders)} folders")
 
 
+   if all_paths:
+       save_pdf(all_paths, out / "output.pdf")
+       do_auto_clear(config)
+       print(f"  Done! → {out}")
+       print("")
+   else:
+       print("  No images found in any folder.")
+       print("")
 
 
-All commands read from the Input folder.
-Use "Add to Input" to copy files/folders in.
-Use "Clear Input" to empty it when done.
 
 
+def images_to_pdf(config, cancel=None):
+   src = get_input(config)
+   src.mkdir(parents=True, exist_ok=True)
 
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-FILE & FOLDER COMMANDS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   print("Images to PDF")
+   print(f"  Input:  {src}")
+   run_name = _get_run_name()
+   if run_name is None:
+       return _cancel()
+   out = get_output(config, "images to pdf", run_name)
+   print(f"  Output: {out}")
 
 
+   image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'}
+   image_files = sorted(
+       [f for f in src.rglob("*") if f.is_file() and f.suffix.lower() in image_extensions],
+       key=lambda x: natural_sort_key(str(x.relative_to(src)))
+   )
 
 
-Folders to PDF
-Converts folders of images into a single PDF.
+   if not image_files:
+       print("  No images found in Input!")
+       print("")
+       return
 
 
+   from collections import Counter
+   ext_counts = Counter(f.suffix.lower() for f in image_files)
+   summary = "  ".join(f"{v}× {k}" for k, v in sorted(ext_counts.items()))
+   print(f"  Found {len(image_files)} images:  {summary}")
+   if cancel and cancel.is_set():
+       print("  Cancelled.")
+       print("")
+       return
+   save_pdf(image_files, out / "output.pdf")
+   do_auto_clear(config)
+   print(f"  Done! → {out}")
+   print("")
 
 
-Images to PDF
-Converts loose images into a single PDF.
 
 
+def folder_renamer(config, cancel=None):
+   src = get_input(config)
+   src.mkdir(parents=True, exist_ok=True)
 
 
-Sort Folders
-Copies files/folders into numbered subfolders
-based on the number found in their name.
+   print("Folder Renamer")
+   print(f"  Input:  {src}")
+   run_name = _get_run_name()
+   if run_name is None:
+       return _cancel()
+   out = get_output(config, "folder renamer", run_name)
+   print(f"  Output: {out}")
 
 
+   # Collect all folders at any depth, paired with their output destination
+   # The parent structure is preserved; only the leaf folder name is changed to its number
+   preview = []
+   skipped = 0
 
 
-Mass Rename
-Bulk rename files. Modes: Prefix, Suffix,
-Replace, Sequence. Originals not modified.
+   def collect(folder, dest_parent):
+       nonlocal skipped
+       subfolders = sorted([f for f in folder.iterdir() if f.is_dir()],
+                           key=lambda x: natural_sort_key(x.name))
+       for sub in subfolders:
+           match = re.search(r'\d+(?:\.\d+)?', sub.name)
+           if match:
+               raw = match.group()
+               if '.' in raw:
+                   integer, decimal = raw.split('.', 1)
+                   new_name = f"{int(integer)}.{decimal}"
+               else:
+                   new_name = str(int(raw))
+               preview.append((sub, dest_parent / new_name))
+           else:
+               skipped += 1
+               # Still recurse into skipped folders preserving their name
+               collect(sub, dest_parent / sub.name)
 
 
+   collect(src, out)
 
 
-Combine Image Sets
-Merges image folders into one output folder,
-renumbering images sequentially.
+   if not preview and skipped == 0:
+       print("  No folders found in Input!")
+       print("")
+       return
 
 
+   print(f"  Found {len(preview)} folder(s) to rename{f', {skipped} skipped' if skipped else ''}.")
+   print("  Preview (first 5):")
+   for old, new in preview[:5]:
+       print(f"    {old.name}  →  {new.name}")
+   if len(preview) > 5:
+       print(f"    ... and {len(preview) - 5} more")
 
 
-Image Converter
-Converts all images to a target format.
-Supported: jpg, png, webp, bmp, tiff
+   copied = failed = 0
+   for old, new in preview:
+       if cancel and cancel.is_set():
+           print(f"  Cancelled. ({copied} renamed so far)")
+           print("")
+           return
+       try:
+           shutil.copytree(str(old), str(new), dirs_exist_ok=True)
+           copied += 1
+       except Exception as e:
+           print(f"  Failed: {old.name}: {e}")
+           failed += 1
 
 
+   print(f"  Renamed: {copied}{f'   Failed: {failed}' if failed else ''}")
+   do_auto_clear(config)
+   print(f"  Done! → {out}")
+   print("")
 
 
-Find Duplicates
-Finds exact duplicate images by MD5 hash.
-Optionally deletes them.
 
 
+def file_renamer(config, cancel=None):
+   src = get_input(config)
+   src.mkdir(parents=True, exist_ok=True)
 
 
-PDF Splitter
-Splits a PDF into parts at page boundaries.
+   print("File Renamer")
+   print(f"  Input:  {src}")
+   run_name = _get_run_name()
+   if run_name is None:
+       return _cancel()
+   out = get_output(config, "renamed", run_name)
+   print(f"  Output: {out}")
 
 
+   items = sorted([f for f in src.rglob("*") if f.is_file()],
+                  key=lambda x: natural_sort_key(x.name))
 
 
-PDF Combiner
-Merges multiple PDFs into one.
+   if not items:
+       print("  No files found in Input!")
+       print("")
+       return
 
 
+   print(f"  Found {len(items)} file(s).")
+   print("  Modes: 1=Prefix  2=Suffix  3=Replace  4=Sequence")
+   mode = input("Choose mode (1-4): ").strip()
+   if mode == SENTINEL:
+       return _cancel()
 
 
-PDF to Images
-Converts PDF pages to image files.
-Requires poppler (brew install poppler).
+   if mode == "1":
+       param1 = input("Prefix to add: ")
+       if param1 == SENTINEL:
+           return _cancel()
+       preview = [(f, out / f.relative_to(src).parent / (param1 + f.name)) for f in items]
+   elif mode == "2":
+       param1 = input("Suffix to add (before extension): ")
+       if param1 == SENTINEL:
+           return _cancel()
+       preview = [(f, out / f.relative_to(src).parent / (f.stem + param1 + f.suffix)) for f in items]
+   elif mode == "3":
+       param1 = input("Find: ")
+       if param1 == SENTINEL:
+           return _cancel()
+       param2 = input("Replace with (Enter for blank): ")
+       if param2 == SENTINEL:
+           return _cancel()
+       preview = [(f, out / f.relative_to(src).parent / f.name.replace(param1, param2)) for f in items]
+   elif mode == "4":
+       param1 = input("Base name (e.g. 'photo'): ")
+       if param1 == SENTINEL:
+           return _cancel()
+       start = input("Start number (default 1): ").strip()
+       if start == SENTINEL:
+           return _cancel()
+       pad = input("Pad digits (default 3): ").strip()
+       if pad == SENTINEL:
+           return _cancel()
+       start = int(start) if start else 1
+       pad   = int(pad)   if pad   else 3
+       preview = [(f, out / f.relative_to(src).parent / f"{param1}_{str(start + i).zfill(pad)}{f.suffix}")
+                  for i, f in enumerate(items)]
+   else:
+       print("  Invalid mode.")
+       print("")
+       return
 
 
+   print("  Preview (first 5):")
+   for old, new in preview[:5]:
+       print(f"    {old.name}  →  {new.name}")
+   if len(preview) > 5:
+       print(f"    ... and {len(preview) - 5} more")
 
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-OTHER
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   copied = failed = 0
+   for old, new in preview:
+       if cancel and cancel.is_set():
+           print(f"  Cancelled. ({copied} renamed so far)")
+           print("")
+           return
+       try:
+           new.parent.mkdir(parents=True, exist_ok=True)
+           shutil.copy2(str(old), str(new))
+           copied += 1
+       except Exception as e:
+           print(f"  Failed: {old.name}: {e}")
+           failed += 1
 
 
+   print(f"  Renamed: {copied}{f'   Failed: {failed}' if failed else ''}")
+   do_auto_clear(config)
+   print(f"  Done! → {out}")
+   print("")
 
 
-Status     — show Input and Output contents
-Config     — set input/output directories
-Settings   — hotkeys and defaults
-Add to Input — copy files or a folder into Input
-Clear Input  — wipe Input folder
 
 
+def combine_image_sets(config, cancel=None):
+   src = get_input(config)
+   src.mkdir(parents=True, exist_ok=True)
 
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-NOTES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• Everything runs locally. Nothing is uploaded.
-• All operations work on copies.
-• Natural sort used throughout (1, 2, 10...).
-• Prompts appear in the log — respond in the
-  input bar that appears at the bottom.
-"""
-      text.insert('1.0', help_text)
-      text.configure(state='disabled')
-      tk.Button(win, text="Close", command=win.destroy).pack(pady=8)
+   print("Combine Image Sets")
+   print(f"  Input:  {src}")
+   run_name = _get_run_name()
+   if run_name is None:
+       return _cancel()
+   out = get_output(config, "combined image set", run_name)
+   print(f"  Output: {out}")
 
 
-  def _build_ui(self):
-      left = tk.Frame(self.root, width=200)
-      left.pack(side='left', fill='y', padx=10, pady=10)
-      left.pack_propagate(False)
+   image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp'}
+   sort_result = resolve_sort(config)
+   if sort_result is None:
+       return _cancel()
+   use_sort = sort_result
 
 
-      title_row = tk.Frame(left)
-      title_row.pack(fill='x', pady=(0, 4))
-      tk.Label(title_row, text="File & Folder Manager", font=('', 11, 'bold')).pack(side='left')
+   def collect_images(folder):
+       all_items = sorted(folder.iterdir(), key=lambda x: natural_sort_key(x.name))
+       images = []
+       for item in all_items:
+           if item.is_file() and item.suffix.lower() in image_extensions:
+               images.append(item)
+           elif item.is_dir():
+               images.extend(collect_images(item))
+       if use_sort:
+           images = sorted(images, key=lambda x: natural_sort_key(x.name))
+       return images
 
 
-      def _mini_btn(parent, text_or_var, cmd, side='right'):
-          t = self._theme()
-          f = tk.Frame(parent, bg=t["fg"], padx=1, pady=1)
-          lbl = tk.Label(f, bg=t["bg"], fg=t["fg"], font=('', 10), width=2, cursor="hand2")
-          if isinstance(text_or_var, str):
-              lbl.configure(text=text_or_var)
-          lbl.pack()
-          lbl.bind("<Button-1>", lambda e: cmd())
-          lbl.bind("<Enter>",    lambda e: lbl.configure(bg=self._theme()["hover"]))
-          lbl.bind("<Leave>",    lambda e: lbl.configure(bg=self._theme()["bg"]))
-          f.pack(side=side, padx=(2, 0))
-          return lbl
+   folders = sorted([f for f in src.iterdir() if f.is_dir()],
+                    key=lambda x: natural_sort_key(x.name))
 
 
-      _mini_btn(title_row, "?", self._show_help)
-      self._dark_btn = _mini_btn(title_row, "🌙" if not self._dark else "☀", self._toggle_dark)
+   if not folders:
+       print("  No folders found in Input!")
+       print("")
+       return
 
 
-      self._btn_frame = tk.Frame(left)
-      self._btn_frame.pack(fill='both', expand=True)
+   print(f"  Found {len(folders)} top-level folder(s).")
+   counter = 1
+   for folder in folders:
+       if cancel and cancel.is_set():
+           print(f"  Cancelled. ({counter - 1} images combined so far)")
+           print("")
+           return
+       throttle_if_needed(config)
+       subfolders = sorted([f for f in folder.iterdir() if f.is_dir()],
+                           key=lambda x: natural_sort_key(x.name))
+       targets = [(f"{folder.name}/{sub.name}", sub) for sub in subfolders] if subfolders else [(folder.name, folder)]
+       for label, target in targets:
+           images = collect_images(target)
+           start_idx = counter
+           for img in images:
+               dest = out / f"{str(counter).zfill(4)}{img.suffix}"
+               shutil.copy2(img, dest)
+               counter += 1
+           print(f"  [{label}]  {len(images)} image(s)  →  {str(start_idx).zfill(4)}–{str(counter - 1).zfill(4)}")
 
 
-      self._right = tk.Frame(self.root)
-      self._right.pack(side='left', fill='both', expand=True, padx=(0, 10), pady=10)
-      tk.Label(self._right, text="Log", font=('', 11, 'bold')).pack(anchor='w')
-      self.log = scrolledtext.ScrolledText(self._right, state='disabled', wrap='word', font=('Courier', 11))
-      self.log.pack(fill='both', expand=True)
+   do_auto_clear(config)
+   print(f"  Total: {counter - 1} images combined.")
+   print(f"  Done! → {out}")
+   print("")
 
 
-      self._rebuild_buttons()
 
 
-  TOGGLEABLE = [
-      ("show_folders_to_pdf",     "Folder", "Folders to PDF",     "run_folders_to_pdf"),
-      ("show_images_to_pdf",      "Folder", "Images to PDF",      "run_images_to_pdf"),
-      ("show_folder_renamer",     "Folder", "Folder Renamer",     "run_folder_renamer"),
-      ("show_file_renamer",       "Folder", "File Renamer",       "run_file_renamer"),
-      ("show_combine",            "Folder", "Combine Image Sets", "run_combine"),
-      ("show_converter",          "Folder", "Image Converter",    "run_converter"),
-      ("show_duplicates",         "Folder", "Find Duplicates",    "run_duplicates"),
-      ("show_pdf_combiner",       "Folder", "PDF Combiner",       "run_pdf_combiner"),
-      ("show_pdf_splitter",       "File",   "PDF Splitter",       "run_pdf_splitter"),
-      ("show_pdf_to_images",      "File",   "PDF to Images",      "run_pdf_to_images"),
-  ]
+def image_converter(config, cancel=None):
+   src = get_input(config)
+   src.mkdir(parents=True, exist_ok=True)
 
 
-  def _make_button(self, parent, text, cmd):
-      t = self._theme()
-      f = tk.Frame(parent, bg=t["fg"], padx=1, pady=1)
-      lbl = tk.Label(f, text=text, bg=t["bg"], fg=t["fg"],
-                     font=('', 10), width=22, cursor="hand2")
-      lbl.pack()
-      lbl.bind("<Button-1>", lambda e: cmd())
-      lbl.bind("<Enter>",    lambda e: lbl.configure(bg=self._theme()["hover"]))
-      lbl.bind("<Leave>",    lambda e: lbl.configure(bg=self._theme()["bg"]))
-      f.pack(pady=2)
-      return f, lbl
+   print("Image Converter")
+   print(f"  Input:  {src}")
+   run_name = _get_run_name()
+   if run_name is None:
+       return _cancel()
 
 
-  def _rebuild_buttons(self):
-      for w in self._btn_frame.winfo_children():
-          w.destroy()
+   fmt = config.get("default_img_fmt", "ask")
+   if fmt == "ask":
+       fmt = input("Format (jpg/png/webp/bmp/tiff, default jpg): ").strip().lower()
+       if fmt == SENTINEL:
+           return _cancel()
+       fmt = fmt or "jpg"
+   else:
+       print(f"  Format: {fmt}")
 
 
-      fixed_sections = [
-          ("Input", [
-              ("Add Input",    self.pick_files),
-              ("Clear Input",  self.clear_input),
-          ]),
-          ("Utility", [
-              ("Status",       self.run_status),
-              ("Clear Log",    self.clear_log),
-              ("Clear Output", self.clear_output),
-              ("Cancel Job",   self.cancel_job),
-          ]),
-          ("Preferences", [
-              ("Config",       self.open_config),
-              ("Options",      self.open_settings),
-          ]),
-      ]
+   # Normalise to Pillow's save format name and the output extension separately
+   pillow_fmt = "JPEG" if fmt == "jpg" else fmt.upper()
+   ext        = ".jpg" if fmt == "jpg" else f".{fmt}"
 
 
-      from collections import OrderedDict
-      toggleable_sections = OrderedDict()
-      for key, section, label, method in self.TOGGLEABLE:
-          if self.config.get(key, True):
-              toggleable_sections.setdefault(section, []).append((label, getattr(self, method)))
+   out = get_output(config, "converted", run_name)
+   print(f"  Output: {out}")
 
 
-      all_sections = list(toggleable_sections.items()) + fixed_sections
+   image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp'}
+   images = sorted(
+       [f for f in src.rglob("*") if f.is_file() and f.suffix.lower() in image_extensions],
+       key=lambda x: natural_sort_key(x.name)
+   )
 
 
-      for section_label, cmds in all_sections:
-          tk.Label(self._btn_frame, text=section_label, font=('', 10, 'bold')).pack(anchor='w', pady=(8, 2))
-          for label, cmd in cmds:
-              self._make_button(self._btn_frame, label, cmd)
+   if not images:
+       print("  No images found in Input!")
+       print("")
+       return
 
 
-      self._apply_theme()
+   from collections import Counter
+   ext_counts = Counter(f.suffix.lower() for f in images)
+   summary = "  ".join(f"{v}× {k}" for k, v in sorted(ext_counts.items()))
+   print(f"  Found {len(images)} images:  {summary}")
+   print(f"  Converting all → {ext} ...")
 
 
-  def _run(self, fn):
-      self.cancel_event.clear()
-      self._job_running = True
-      def wrapper():
-          try:
-              fn()
-          finally:
-              self._job_running = False
-      threading.Thread(target=wrapper, daemon=True).start()
+   converted = copied = failed = 0
+   for img_path in images:
+       if cancel and cancel.is_set():
+           print(f"  Cancelled. ({converted + copied} images processed so far)")
+           print("")
+           return
+       throttle_if_needed(config)
+       dest_dir = out / img_path.relative_to(src).parent
+       dest_dir.mkdir(parents=True, exist_ok=True)
+       dest = dest_dir / (img_path.stem + ext)
+       # Treat .jpeg and .jpg as the same format
+       src_ext = img_path.suffix.lower()
+       already_correct = src_ext == ext or (ext == ".jpg" and src_ext == ".jpeg")
+       if already_correct:
+           shutil.copy2(img_path, dest)
+           copied += 1
+       else:
+           try:
+               img = Image.open(img_path)
+               if pillow_fmt == "JPEG" and img.mode in ("RGBA", "P"):
+                   img = img.convert("RGB")
+               img.save(dest, pillow_fmt)
+               converted += 1
+           except Exception as e:
+               print(f"  Failed: {img_path.name}: {e}")
+               failed += 1
 
 
-  def cancel_job(self):
-      if not getattr(self, '_job_running', False):
-          print("  No job is running.")
-          return
-      self.cancel_event.set()
-      print("  Cancelling...")
+   print(f"  Converted: {converted}   Already correct: {copied}{f'   Failed: {failed}' if failed else ''}")
+   do_auto_clear(config)
+   print(f"  Done! → {out}")
+   print("")
 
 
-  def clear_log(self):
-      self.log.configure(state='normal')
-      self.log.delete('1.0', tk.END)
-      self.log.configure(state='disabled')
 
 
-  def clear_output(self):
-      out_dir = Path(self.config["output"]) / "output"
-      if not out_dir.exists() or not any(out_dir.iterdir()):
-          print("Output folder is already empty.")
-          return
-      for item in out_dir.iterdir():
-          try:
-              shutil.rmtree(item) if item.is_dir() else item.unlink()
-          except Exception as e:
-              print(f"Failed to delete {item.name}: {e}")
-      print("Output cleared.")
+def find_duplicates(config, cancel=None):
+   src = get_input(config)
+   src.mkdir(parents=True, exist_ok=True)
 
+   print("Find Duplicates")
+   print(f"  Input:  {src}")
+   run_name = _get_run_name()
+   if run_name is None:
+       return _cancel()
+   out = get_output(config, "find duplicates", run_name)
+   print(f"  Output: {out}")
 
-  def clear_input(self):
-      input_dir = get_input(self.config)
-      if not input_dir.exists() or not any(input_dir.iterdir()):
-          print("Input folder is already empty.")
-          return
-      for item in input_dir.iterdir():
-          try:
-              shutil.rmtree(item) if item.is_dir() else item.unlink()
-          except Exception as e:
-              print(f"Failed to delete {item.name}: {e}")
-      print("Input cleared.")
+   custom = input(f"Folder to scan (Enter for Input): ").strip()
+   if custom == SENTINEL:
+       return _cancel()
+   target = Path(custom) if custom else src
 
+   if not target.exists():
+       print("  Folder doesn't exist.")
+       print("")
+       return
 
-  def open_config(self):
-      win = tk.Toplevel(self.root)
-      win.title("Config")
-      win.resizable(False, False)
+   print(f"  Scanning: {target}")
+   image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp'}
 
+   all_files = [f for f in target.rglob("*") if f.is_file() and f.suffix.lower() in image_extensions]
+   print(f"  Hashing {len(all_files)} image(s)...")
 
-      labels = [("input", "Input directory"), ("output", "Output directory")]
-      entries = {}
-      for i, (key, label) in enumerate(labels):
-          tk.Label(win, text=label, anchor='w').grid(
-              row=i, column=0, padx=10, pady=4, sticky='w')
-          e = tk.Entry(win, width=50)
-          e.insert(0, self.config.get(key, ""))
-          e.grid(row=i, column=1, padx=10, pady=4)
-          entries[key] = e
+   hashes = {}
+   duplicates = []
+   for f in all_files:
+       if cancel and cancel.is_set():
+           print("  Cancelled.")
+           print("")
+           return
+       digest = hashlib.md5(f.read_bytes()).hexdigest()
+       if digest in hashes:
+           duplicates.append((f, hashes[digest]))
+       else:
+           hashes[digest] = f
 
+   if not duplicates:
+       print(f"  No duplicates found across {len(all_files)} images.")
+       print("")
+       return
 
-      def save():
-          for key, entry in entries.items():
-              val = entry.get().strip()
-              if val and Path(val).exists():
-                  self.config[key] = val
-              elif val:
-                  messagebox.showwarning("Invalid Path", f"Does not exist: {val}")
-                  return
-          save_config(self.config)
-          win.destroy()
+   print(f"  Found {len(duplicates)} duplicate(s) out of {len(all_files)} images:")
+   for dup, original in duplicates[:10]:
+       print(f"    {dup.name}  ==  {original.name}")
+   if len(duplicates) > 10:
+       print(f"    ... and {len(duplicates) - 10} more")
 
+   confirm = input(f"Delete all {len(duplicates)} duplicates? (y/Enter=yes): ").strip().lower()
+   if confirm == SENTINEL:
+       return _cancel()
+   if confirm not in ("y", "yes", ""):
+       print("  Cancelled.")
+       print("")
+       return
 
-      def set_all():
-          path = entries["input"].get().strip()
-          if path and Path(path).exists():
-              for e in entries.values():
-                  e.delete(0, tk.END)
-                  e.insert(0, path)
-
-
-      btn = tk.Frame(win)
-      btn.grid(row=len(labels), column=0, columnspan=2, pady=10)
-      for txt, cmd in [("Set All", set_all), ("Save", save), ("Cancel", win.destroy)]:
-          tk.Button(btn, text=txt, command=cmd).pack(side='left', padx=5)
-
-
-  def open_settings(self):
-      win = tk.Toplevel(self.root)
-      win.title("Options")
-      win.resizable(False, False)
-
-
-      fields = [
-          ("auto_clear_input", "Auto Clear Input After Job",    "check", None),
-          ("replace_output",   "Replace Output Each Run",       "check", None),
-          ("sort_output",      "Sort Output by Operation Type", "check", None),
-          ("default_sort",     "Default Sort Mode",             "combo", ["ask", "natural", "none"]),
-          ("default_dpi",      "Default DPI (PDF to Images)",   "combo", ["ask", "72", "96", "150", "200", "300", "600"]),
-          ("default_img_fmt",  "Default Image Format",          "combo", ["ask", "jpg", "png", "webp", "bmp", "tiff"]),
-          ("hotkey_continue",  "Continue Hotkey",               "combo", ["Return", "space", "Right"]),
-          ("hotkey_cancel",    "Cancel Hotkey",                 "combo", ["Escape", "space", "Left"]),
-          ("throttle_cpu",     "Throttle: Max CPU % (0 = off)",      "combo", ["0", "50", "60", "70", "80", "90"]),
-          ("throttle_mem",     "Throttle: Max Memory % (0 = off)",   "combo", ["0", "50", "60", "70", "80", "90"]),
-      ]
-
-
-      row = 0
-      tk.Label(win, text="General", font=('', 10, 'bold'), anchor='w').grid(
-          row=row, column=0, columnspan=2, padx=10, pady=(10, 2), sticky='w')
-      row += 1
-
-
-      vars_ = {}
-      for key, label, typ, opts in fields:
-          tk.Label(win, text=label, anchor='w').grid(
-              row=row, column=0, padx=10, pady=5, sticky='w')
-          if typ == "check":
-              v = tk.BooleanVar(value=bool(self.config.get(key, False)))
-              tk.Checkbutton(win, variable=v).grid(row=row, column=1, padx=10, sticky='w')
-          else:
-              v = tk.StringVar(value=str(self.config.get(key, opts[0])))
-              ttk.Combobox(win, textvariable=v, values=opts, state='readonly', width=20).grid(
-                  row=row, column=1, padx=10, sticky='w')
-          vars_[key] = v
-          row += 1
-
-
-      tk.Label(win, text="Visible Buttons", font=('', 10, 'bold'), anchor='w').grid(
-          row=row, column=0, columnspan=2, padx=10, pady=(14, 2), sticky='w')
-      row += 1
-
-
-      btn_vars = {}
-      for key, section, label, _ in self.TOGGLEABLE:
-          v = tk.BooleanVar(value=bool(self.config.get(key, True)))
-          tk.Label(win, text=f"{label}  ({section})", anchor='w').grid(
-              row=row, column=0, padx=10, pady=3, sticky='w')
-          tk.Checkbutton(win, variable=v).grid(row=row, column=1, padx=10, sticky='w')
-          btn_vars[key] = v
-          row += 1
-
-
-      def save():
-          for key, v in vars_.items():
-              val = v.get()
-              if key in ("auto_clear_input", "replace_output", "sort_output"):
-                  self.config[key] = bool(val)
-              elif key in ("throttle_cpu", "throttle_mem"):
-                  self.config[key] = int(str(val).split()[0])
-              elif key == "default_dpi":
-                  self.config[key] = val if val == "ask" else int(val)
-              else:
-                  self.config[key] = val
-          for key, v in btn_vars.items():
-              self.config[key] = bool(v.get())
-          save_config(self.config)
-          self._rebuild_buttons()
-          win.destroy()
-
-
-      btn = tk.Frame(win)
-      btn.grid(row=row, column=0, columnspan=2, pady=10)
-      tk.Button(btn, text="Save",   command=save).pack(side='left', padx=5)
-      tk.Button(btn, text="Cancel", command=win.destroy).pack(side='left', padx=5)
-
-
-  def pick_files(self):
-      input_dir = get_input(self.config)
-      input_dir.mkdir(parents=True, exist_ok=True)
-      dialog_result = queue.Queue()
-
-
-      def open_dialog(choice):
-          if choice == "FILES":
-              paths = filedialog.askopenfilenames(title="Select files to add to Input")
-              dialog_result.put(list(paths))
-          elif choice == "FOLDER":
-              folder = filedialog.askdirectory(title="Select a folder to add to Input")
-              dialog_result.put([folder] if folder else [])
-          else:
-              dialog_result.put([])
-
-
-      def run():
-          print("Add to Input")
-          print("  Enter = Files   Space = Folder   Escape = Cancel")
-          choice = thread_safe_input("Waiting for key...").strip()
-          if choice not in ("FILES", "FOLDER"):
-              print("  Cancelled.")
-              return
-          self.root.after(0, lambda: open_dialog(choice))
-          paths = dialog_result.get()
-          if not paths:
-              print("  Nothing selected.")
-              return
-          print(f"  Copying {len(paths)} item(s) to Input...")
-          ok, fail = 0, 0
-          for p in paths:
-              src = Path(p)
-              dest = input_dir / src.name
-              try:
-                  if src.is_dir():
-                      shutil.copytree(str(src), str(dest), dirs_exist_ok=True)
-                  else:
-                      shutil.copy2(str(src), str(dest))
-                  ok += 1
-              except Exception as e:
-                  print(f"  Failed: {src.name}: {e}")
-                  fail += 1
-          print(f"  Done! {ok} added{f', {fail} failed' if fail else ''} → {input_dir}")
-
-
-      self._run(run)
-
-
-  def run_folders_to_pdf(self):  self._run(lambda: folders_to_pdf(self.config, self.cancel_event))
-  def run_images_to_pdf(self):   self._run(lambda: images_to_pdf(self.config, self.cancel_event))
-  def run_folder_renamer(self):  self._run(lambda: folder_renamer(self.config, self.cancel_event))
-  def run_file_renamer(self):    self._run(lambda: file_renamer(self.config, self.cancel_event))
-  def run_combine(self):         self._run(lambda: combine_image_sets(self.config, self.cancel_event))
-  def run_converter(self):       self._run(lambda: image_converter(self.config, self.cancel_event))
-  def run_duplicates(self):      self._run(lambda: find_duplicates(self.config, self.cancel_event))
-  def run_pdf_splitter(self):    self._run(lambda: pdf_splitter(self.config, self.cancel_event))
-  def run_pdf_combiner(self):    self._run(lambda: pdf_combiner(self.config, self.cancel_event))
-  def run_pdf_to_images(self):   self._run(lambda: pdf_to_images(self.config, self.cancel_event))
-  def run_status(self):          self._run(lambda: status(self.config))
+   deleted = failed = 0
+   for dup, _ in duplicates:
+       try:
+           dup.unlink()
+           deleted += 1
+       except Exception as e:
+           print(f"  Failed to delete {dup.name}: {e}")
+           failed += 1
+
+   print(f"  Deleted: {deleted}{f'   Failed: {failed}' if failed else ''}")
+   do_auto_clear(config)
+   print(f"  Done! → {out}")
+   print("")
+
+
+
+
+def pdf_combiner(config, cancel=None):
+   src = get_input(config)
+   src.mkdir(parents=True, exist_ok=True)
+
+
+   print("PDF Combiner")
+   print(f"  Input:  {src}")
+   run_name = _get_run_name()
+   if run_name is None:
+       return _cancel()
+   out = get_output(config, "pdf combined", run_name)
+   print(f"  Output: {out}")
+
+
+   sort_result = resolve_sort(config)
+   if sort_result is None:
+       return _cancel()
+   pdfs = [f for f in src.rglob("*") if f.is_file() and f.suffix.lower() == ".pdf"]
+   if sort_result:
+       pdfs = sorted(pdfs, key=lambda x: natural_sort_key(x.name))
+
+
+   if not pdfs:
+       print("  No PDFs found in Input!")
+       print("")
+       return
+
+
+   print(f"  Found {len(pdfs)} PDF(s). Combining...")
+   writer = PdfWriter()
+   total_pages = 0
+   for pdf_path in pdfs:
+       if cancel and cancel.is_set():
+           print(f"  Cancelled. ({total_pages} pages combined so far)")
+           print("")
+           return
+       throttle_if_needed(config)
+       reader = PdfReader(str(pdf_path))
+       for page in reader.pages:
+           writer.add_page(page)
+       total_pages += len(reader.pages)
+       print(f"  [{pdf_path.name}]  {len(reader.pages)} page(s)  (running total: {total_pages})")
+
+
+   out_path = out / "combined.pdf"
+   with open(out_path, "wb") as f:
+       writer.write(f)
+   size_mb = out_path.stat().st_size / (1024 * 1024)
+   print(f"  Saved: combined.pdf  ({total_pages} pages, {size_mb:.1f} MB)")
+   do_auto_clear(config)
+   print(f"  Done! → {out}")
+   print("")
+
+
+
+
+def pdf_to_images(config, cancel=None):
+   try:
+       from pdf2image import convert_from_path
+   except ImportError:
+       print("  pdf2image not installed — run: pip install pdf2image")
+       print("  Also need poppler: brew install poppler")
+       print("")
+       return
+
+
+   src = get_input(config)
+   src.mkdir(parents=True, exist_ok=True)
+
+
+   print("PDF to Images")
+   print(f"  Input:  {src}")
+   run_name = _get_run_name()
+   if run_name is None:
+       return _cancel()
+
+   fmt = config.get("default_img_fmt", "ask")
+   if fmt == "ask":
+       raw = input("Format (jpg/png, default jpg): ").strip().lower()
+       if raw == SENTINEL:
+           return _cancel()
+       fmt = raw or "jpg"
+   else:
+       print(f"  Format: {fmt}")
+   if fmt not in ("jpg", "png"):
+       print("  Invalid format.")
+       print("")
+       return
+
+   dpi = config.get("default_dpi", "ask")
+   if dpi == "ask":
+       raw = input("DPI (default 150): ").strip()
+       if raw == SENTINEL:
+           return _cancel()
+       dpi = int(raw) if raw else 150
+   else:
+       print(f"  DPI: {dpi}")
+
+   out = get_output(config, "pdf to images", run_name)
+   print(f"  Output: {out}")
+
+
+   pdfs = sorted(
+       [f for f in src.rglob("*") if f.is_file() and f.suffix.lower() == ".pdf"],
+       key=lambda x: natural_sort_key(x.name)
+   )
+   if not pdfs:
+       print("  No PDFs found in Input!")
+       print("")
+       return
+
+
+   print(f"  Found {len(pdfs)} PDF(s).")
+   total_pages = 0
+   for pdf_path in pdfs:
+       if cancel and cancel.is_set():
+           print(f"  Cancelled. ({total_pages} pages exported so far)")
+           print("")
+           return
+       pdf_out = out / pdf_path.stem
+       pdf_out.mkdir(exist_ok=True)
+       print(f"  Converting: {pdf_path.name}  (@ {dpi} DPI)...")
+       print(f"  Note: cancelling will stop after the current page finishes.")
+       page_count = len(PdfReader(str(pdf_path)).pages)
+       for i in range(page_count):
+           if cancel and cancel.is_set():
+               print(f"  Cancelled. ({total_pages + i} pages exported so far)")
+               print("")
+               return
+           throttle_if_needed(config)
+           pages = convert_from_path(str(pdf_path), dpi=dpi, first_page=i + 1, last_page=i + 1)
+           dest = pdf_out / f"{pdf_path.stem}_{str(i + 1).zfill(4)}.{fmt}"
+           pages[0].save(str(dest), "JPEG" if fmt == "jpg" else "PNG")
+       total_pages += page_count
+       print(f"  [{pdf_path.name}]  {page_count} page(s)  →  {pdf_out.name}/")
+
+
+   do_auto_clear(config)
+   print(f"  Total: {len(pdfs)} PDF(s), {total_pages} page(s) exported.")
+   print(f"  Done! → {out}")
+   print("")
+
+
+
+
+def pdf_splitter(config, cancel=None):
+   src = get_input(config)
+   src.mkdir(parents=True, exist_ok=True)
+
+
+   print("PDF Splitter")
+   print(f"  Input:  {src}")
+   run_name = _get_run_name()
+   if run_name is None:
+       return _cancel()
+   out = get_output(config, "pdf split", run_name)
+   print(f"  Output: {out}")
+
+
+   # Use rglob for consistency with other functions
+   pdfs = sorted(
+       [f for f in src.rglob("*") if f.is_file() and f.suffix.lower() == ".pdf"],
+       key=lambda x: natural_sort_key(x.name)
+   )
+   if not pdfs:
+       print("  No PDF found in Input!")
+       print("")
+       return
+   if len(pdfs) > 1:
+       print(f"  Multiple PDFs found, using first: {pdfs[0].name}")
+   pdf_path = pdfs[0]
+
+
+   reader = PdfReader(str(pdf_path))
+   total = len(reader.pages)
+   print(f"  Loaded: {pdf_path.name}  ({total} pages)")
+   print(f"  Enter page numbers to split after. Empty input = done.")
+   print(f"  Valid range: 1–{total - 1}")
+
+
+   splits = [0]
+   while True:
+       cmd = input(f"Split after page (1-{total - 1}), or Enter to finish: ").strip().lower()
+       if cmd == SENTINEL:
+           return _cancel()
+       if cmd in ("exit", ""):
+           break
+       try:
+           page_num = int(cmd)
+           if page_num < 1 or page_num >= total:
+               print(f"  Must be between 1 and {total - 1}.")
+               continue
+           splits.append(page_num)
+           print(f"  ✓ Split marked after page {page_num}. ({len(splits) - 1} split(s) so far)")
+       except ValueError:
+           print("  Invalid input.")
+
+
+   splits = sorted(set(splits))
+   splits.append(total)
+
+
+   if len(splits) < 2:
+       print("  No splits made.")
+       print("")
+       return
+
+
+   stem = pdf_path.stem
+   part_count = len(splits) - 1
+   print(f"  Writing {part_count} part(s)...")
+   for i in range(part_count):
+       if cancel and cancel.is_set():
+           print(f"  Cancelled. ({i} part(s) saved so far)")
+           print("")
+           return
+       start, end = splits[i], splits[i + 1]
+       writer = PdfWriter()
+       for p in range(start, end):
+           writer.add_page(reader.pages[p])
+       out_path = out / f"{stem}_part{i + 1}.pdf"
+       with open(out_path, "wb") as f:
+           writer.write(f)
+       print(f"  Part {i + 1}/{part_count}: pages {start + 1}–{end}  →  {out_path.name}")
+
+
+   do_auto_clear(config)
+   print(f"  Done! {part_count} part(s) saved.")
+   print(f"  → {out}")
+   print("")
+
+
+
+
+def status(config):
+   src = get_input(config)
+   out_base = Path(config["output"]) / "output"
+
+
+   print("")
+   if src.exists():
+       items = list(src.iterdir())
+       files = [i for i in items if i.is_file()]
+       dirs  = [i for i in items if i.is_dir()]
+       parts = []
+       if dirs:  parts.append(f"{len(dirs)} folder(s)")
+       if files: parts.append(f"{len(files)} file(s)")
+       print(f"  Input: {', '.join(parts) if parts else 'empty'}")
+       for d in sorted(dirs, key=lambda x: natural_sort_key(x.name)):
+           sub_dirs = sorted([i for i in d.iterdir() if i.is_dir()], key=lambda x: natural_sort_key(x.name))
+           file_count = sum(1 for _ in d.rglob("*") if _.is_file())
+           print(f"    [folder] {d.name}/  ({file_count} file(s))")
+           for sd in sub_dirs:
+               sc = sum(1 for _ in sd.rglob("*") if _.is_file())
+               print(f"             {sd.name}/  ({sc} file(s))")
+       for f in sorted(files, key=lambda x: natural_sort_key(x.name)):
+           print(f"    [file]   {f.name}")
+   else:
+       print("  Input: (doesn't exist)")
+
+
+   if out_base.exists():
+       items = [i for i in out_base.iterdir() if i.is_dir()]
+       if items:
+           print(f"  Output:")
+           for op in sorted(items, key=lambda x: natural_sort_key(x.name)):
+               file_count = sum(1 for f in op.rglob("*") if f.is_file())
+               print(f"    {op.name}/  ({file_count} file(s))")
+       else:
+           print(f"  Output: empty")
+   else:
+       print(f"  Output: empty")
+   print("")
+
+
+
+
+def info():
+   print("""
+-- File & Folder Management --
+'folders to pdf'     'images to pdf'     'folder renamer'
+'file renamer'       'combine image sets' 'image converter'
+'find duplicates'    'pdf splitter'       'pdf combiner'
+'pdf to images'
+
+
+-- Other --
+'status'  'exit'
+
+
+All output goes to output/
+""")
+
+
+
+
+def command_line():
+   config = load_config()
+   print("\nFile & Folder Manager — type 'info' for commands")
+   while True:
+       command = input(">>> ").strip().lower()
+       try:
+           if command == "info":                 info()
+           elif command == "folders to pdf":     folders_to_pdf(config)
+           elif command == "images to pdf":      images_to_pdf(config)
+           elif command == "folder renamer":     folder_renamer(config)
+           elif command == "file renamer":       file_renamer(config)
+           elif command == "combine image sets": combine_image_sets(config)
+           elif command == "image converter":    image_converter(config)
+           elif command == "pdf splitter":       pdf_splitter(config)
+           elif command == "pdf combiner":       pdf_combiner(config)
+           elif command == "pdf to images":      pdf_to_images(config)
+           elif command == "find duplicates":    find_duplicates(config)
+           elif command == "status":             status(config)
+           elif command == "exit":
+               print("exiting...")
+               break
+           else:
+               print("Invalid command. Type 'info' for list.")
+       except KeyboardInterrupt:
+           print("\nInterrupted.")
 
 
 
 
 if __name__ == "__main__":
-  root = tk.Tk()
-  root.geometry("900x600")
-  app = App(root)
-  root.mainloop()
-
-
+   command_line()
