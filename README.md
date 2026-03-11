@@ -1,4 +1,4 @@
-Filer is a File Manager for Modern MacOS, Windows, and Linux
+#Filer is a File Manager for Modern MacOS, Windows, and Linux
 
 # How to run
 To run the program please clone the project and Gui.py
