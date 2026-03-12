@@ -19,8 +19,8 @@ SENTINEL = "\x00CANCELLED\x00"
 
 
 DEFAULTS = {
-   "input":            str(Path.home() / "Downloads"),
-   "output":           str(Path.home() / "Downloads"),
+   "input":            "./resources",
+   "output":           "./resources",
    "default_sort":     "ask",
    "default_dpi":      "ask",
    "default_img_fmt":  "ask",
@@ -31,6 +31,7 @@ DEFAULTS = {
    "hotkey_cancel":    "Escape",
    "throttle_cpu":     80,
    "throttle_mem":     80,
+   "dark_mode":        False,
 }
 
 
@@ -159,7 +160,7 @@ def _get_run_name(prompt="Run name (Enter to skip): "):
    val = input(prompt).strip()
    if val == SENTINEL:
        return None
-   return val or "Result"
+   return val or "Output"
 
 
 
