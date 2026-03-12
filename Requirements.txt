@@ -1,6 +1,0 @@
-pyinstaller
-pillow
-img2pdf
-pypdf
-pdf2image
-psutil
