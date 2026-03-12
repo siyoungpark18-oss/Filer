@@ -215,49 +215,8 @@ class App:
 
        help_text = """Filer.
 
-Filer is a file manager. It's an open source project that specializes in managing image files in bulk. It's cool because you can manage files and the way they are formatted locally—no data or analytics are used and no data leaves your computer.
-
-To access the Github Page
-https://github.com/siyoungpark18-oss/Filer?tab=AGPL-3.0-1-ov-file 
-
-
-To access the .dmg or disk image for MacOS users visit the link to download it here:
-https://drive.google.com/drive/u/2/folders/1gjRlr2hV7RjLBTGlGs2SqQgKNaW4T0Il 
-Currently, to install its modern Windows or Linux counterpart, you must download the source files on github and run the builders. 
-
-
-To view previous versions of Filer, visit the link https://drive.google.com/drive/u/2/folders/1jT_qMHEpWVczcIwBHTYJt1QkrE6WL8pb 
-
-Filer—whats it for?
-While there are essentially an infinite number of file managers, Filer specializes in a few niches and carries a few advantages that I—the developer—think makes it worth considering in a few use cases.
-
-This app works with copies—when using the app, feel free to delete the inputs and outputs as necessary because the original files are not lost. These utility functions exist to be used. 
-
-It's to be noted that only 1 file or folder can be attached at a time! It is very much possible to attach multiple files or folders, but it can be somewhat tedius. To process multiple files or folders at a time, it's suggested that you move all of the files you would like to manage into 1 folder beforehand and attach that folder all at once.
-
-It is also suggested that there are only a few inputs at a time.With all processes the tool is capable of, you cannot pick the files within the input that are to be processed. It will process all of the files in the input automatically, and this is intentional. To avoid processing multiple files that are unrelated, you should clear the input periodically when you’re done with the current files in input, and this is the intended workflow.
-
-
-It has a few advantages, mainly that its
-- Open source—all the source files are on its github page available for download
-- Files are Locally Managed—there is no movement of any data or analytics
-- Minimalistic—the user interface is simple and quick to navigate once learned 
-- Files are not uploaded, but rather copied into folders—This makes all file and folder processes much faster. 
-Because of this, you can also directly view the input and output folders and move files yourself separate from the interface.
-
-This tool specializes in speed and volume—It may be a little more difficult to navigate for a beginner.
-
-
-It has its disadvantages though with
-- Less Graphics—its probably not the easiest software out there to learn initially
-- Reliance on Keybinds—The software sometimes relies on keybinds for its request of input to avoid excessive pop-ups. This comes across as difficult to use.
-- Because of its speed, the Filer app can under certain circumstances use up all the available RAM resources and cause a computer to crash. This can be mitigated by the CPU and RAM throttles in the configuration to change it.
-- Only one folder or file can be attached at a time!!!
-
-
-
-The Niche intended use of each tool
-At its heart, Filer’s intended purpose was and still is a File Manager. But to be more specific, it’s specialized for image management en masse. It's meant to manage, convert, and compress folders with images or individual images in the thousands at a time and to do this with speed. 
+Filer is a file manager. 
+To be more specific, it’s specialized for image management en masse. It's meant to manage, convert, and compress folders with images or individual images in the thousands at a time and to do this with speed. 
 
 And with this comes its true Niche or intended use. Ultimately, Filer is a companion to large scale Manga Piracy. To those who wish to own and obtain manga from third party sources you may find that a multitude of reasons can impede time-efficient management of what could be thousands of manga pages, each stored as an individual image. 
 
@@ -395,6 +354,63 @@ This app is under active development by 1 dev and its fellow large language mode
        text.configure(state='disabled')
        tk.Button(win, text="Close", command=win.destroy).pack(pady=8)
 
+   def _show_docs(self):
+       win = tk.Toplevel(self.root)
+       win.title("Documentation")
+       win.geometry("600x620")
+       win.resizable(False, False)
+
+       text = scrolledtext.ScrolledText(win, wrap='word', font=('Courier', 11),
+                                        padx=10, pady=10)
+       text.pack(fill='both', expand=True)
+
+       docs_text = """Filer.
+
+Filer is a file manager. It's an open source project that specializes in managing image files in bulk. It's cool because you can manage files and the way they are formatted locally—no data or analytics are used and no data leaves your computer.
+
+To access the Github Page
+https://github.com/siyoungpark18-oss/Filer?tab=AGPL-3.0-1-ov-file 
+
+
+To access the .dmg or disk image for MacOS users visit the link to download it here:
+https://drive.google.com/drive/u/2/folders/1gjRlr2hV7RjLBTGlGs2SqQgKNaW4T0Il 
+Currently, to install its modern Windows or Linux counterpart, you must download the source files on github and run the builders. 
+
+
+To view previous versions of Filer, visit the link https://drive.google.com/drive/u/2/folders/1jT_qMHEpWVczcIwBHTYJt1QkrE6WL8pb 
+
+Filer—whats it for?
+While there are essentially an infinite number of file managers, Filer specializes in a few niches and carries a few advantages that I—the developer—think makes it worth considering in a few use cases.
+
+This app works with copies—when using the app, feel free to delete the inputs and outputs as necessary because the original files are not lost. These utility functions exist to be used. 
+
+It's to be noted that only 1 file or folder can be attached at a time! It is very much possible to attach multiple files or folders, but it can be somewhat tedius. To process multiple files or folders at a time, it's suggested that you move all of the files you would like to manage into 1 folder beforehand and attach that folder all at once.
+
+It is also suggested that there are only a few inputs at a time.With all processes the tool is capable of, you cannot pick the files within the input that are to be processed. It will process all of the files in the input automatically, and this is intentional. To avoid processing multiple files that are unrelated, you should clear the input periodically when you’re done with the current files in input, and this is the intended workflow.
+
+It has a few advantages, mainly that its
+- Open source—all the source files are on its github page available for download
+- Files are Locally Managed—there is no movement of any data or analytics
+- Minimalistic—the user interface is simple and quick to navigate once learned 
+- Files are not uploaded, but rather copied into folders—This makes all file and folder processes much faster. 
+Because of this, you can also directly view the input and output folders and move files yourself separate from the interface.
+
+This tool specializes in speed and volume—It may be a little more difficult to navigate for a beginner.
+
+
+It has its disadvantages though with
+- Less Graphics—its probably not the easiest software out there to learn initially
+- Reliance on Keybinds—The software sometimes relies on keybinds for its request of input to avoid excessive pop-ups. This comes across as difficult to use.
+- Because of its speed, the Filer app can under certain circumstances use up all the available RAM resources and cause a computer to crash. This can be mitigated by the CPU and RAM throttles in the configuration to change it.
+- Only one folder or file can be attached at a time!!!
+
+"""
+
+       text.insert('1.0', docs_text)
+       text.configure(state='disabled')
+       tk.Button(win, text="Close", command=win.destroy).pack(pady=8)
+
+
    def _build_ui(self):
        left = tk.Frame(self.root, width=200)
        left.pack(side='left', fill='y', padx=10, pady=10)
@@ -419,7 +435,7 @@ This app is under active development by 1 dev and its fellow large language mode
                self.root.after(300, lambda: setattr(self, '_last_click', None))
                cmd()
                return "break"
-           
+
            lbl.bind("<Button-1>", on_click)
            lbl.bind("<Enter>", lambda e: lbl.configure(bg=self._theme()["hover"]))
            lbl.bind("<Leave>", lambda e: lbl.configure(bg=self._theme()["bg"]))
@@ -427,6 +443,7 @@ This app is under active development by 1 dev and its fellow large language mode
            return lbl
 
        _mini_btn(title_row, "?", self._show_help)
+       _mini_btn(title_row, "i", self._show_docs)
        self._dark_btn = _mini_btn(title_row, "🌙" if not self._dark else "☀", self._toggle_dark)
 
        self._btn_frame = tk.Frame(left)
