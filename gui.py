@@ -284,7 +284,6 @@ And with this comes its true Niche or intended use. Ultimately, Filer is a compa
 
 Following is the explanation of the use cases for each tool within this Niche. I hope it's useful in these areas at the very least.
 
-**For Information on the main interface, hover over the information button or i on the main window**
 
 
 The Intended use of each tool
@@ -608,7 +607,7 @@ This app is under active development by 1 dev and its fellow large language mode
        # Register for state management
        self._btn_labels[text] = lbl
 
-       if tooltip:
+       if tooltip and self.config.get("show_tooltips", True):
            info = tk.Label(row, text="i", bg=t["bg"], fg=t["hint_fg"],
                            font=('', 9), cursor="hand2", padx=2)
            info.pack(side='left', padx=(3, 0))
@@ -749,7 +748,8 @@ This app is under active development by 1 dev and its fellow large language mode
            ("auto_clear_input",   "Auto Clear Input After Job",        "check", None),
            ("replace_output",     "Replace Output Each Run",           "check", None),
            ("sort_output",        "Sort Output by Operation Type",     "check", None),
-           ("guide_empty_input",  "Dim out Tools when Input Empty",    "check", None),
+           ("guide_empty_input", "Dim out Tools when Input Empty",     "check", None),
+           ("show_tooltips", "Show Tooltip Hints",                     "check", None),
            ("default_sort",       "Default Sort Mode",                 "combo", ["ask", "natural", "none"]),
            ("default_dpi",        "Default DPI (PDF to Images)",       "combo", ["ask", "72", "96", "150", "200", "300", "600"]),
            ("default_img_fmt",    "Default Image Format",              "combo", ["ask", "jpg", "png", "webp", "bmp", "tiff"]),
@@ -769,7 +769,7 @@ This app is under active development by 1 dev and its fellow large language mode
            tk.Label(win, text=label, anchor='w').grid(
                row=row, column=0, padx=10, pady=5, sticky='w')
            if typ == "check":
-               v = tk.BooleanVar(value=bool(self.config.get(key, True if key == "guide_empty_input" else False)))
+               v = tk.BooleanVar(value=bool(self.config.get(key, True if key in ("guide_empty_input", "show_tooltips") else False)))
                tk.Checkbutton(win, variable=v).grid(row=row, column=1, padx=10, sticky='w')
            else:
                v = tk.StringVar(value=str(self.config.get(key, opts[0])))
@@ -794,7 +794,7 @@ This app is under active development by 1 dev and its fellow large language mode
        def save():
            for key, v in vars_.items():
                val = v.get()
-               if key in ("auto_clear_input", "replace_output", "sort_output", "guide_empty_input"):
+               if key in ("auto_clear_input", "replace_output", "sort_output", "guide_empty_input", "show_tooltips"):
                    self.config[key] = bool(val)
                elif key in ("throttle_cpu", "throttle_mem"):
                    self.config[key] = int(str(val).split()[0])
