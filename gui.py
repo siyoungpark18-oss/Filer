@@ -413,9 +413,13 @@ This app is under active development by 1 dev and its fellow large language mode
            lbl.pack()
 
            def on_click(e):
+               if getattr(self, '_last_click', 0) == id(cmd):
+                   return "break"
+               self._last_click = id(cmd)
+               self.root.after(300, lambda: setattr(self, '_last_click', None))
                cmd()
                return "break"
-
+           
            lbl.bind("<Button-1>", on_click)
            lbl.bind("<Enter>", lambda e: lbl.configure(bg=self._theme()["hover"]))
            lbl.bind("<Leave>", lambda e: lbl.configure(bg=self._theme()["bg"]))
