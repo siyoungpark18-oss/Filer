@@ -464,28 +464,83 @@ This app is under active development by 1 dev and its fellow large language mode
        self._rebuild_buttons()
 
    TOGGLEABLE = [
-       ("show_folders_to_pdf",     "Folder", "Folders to PDF",     "run_folders_to_pdf"),
-       ("show_images_to_pdf",      "Folder", "Images to PDF",      "run_images_to_pdf"),
-       ("show_folder_renamer",     "Folder", "Folder Renamer",     "run_folder_renamer"),
-       ("show_file_renamer",       "Folder", "File Renamer",       "run_file_renamer"),
-       ("show_combine",            "Folder", "Combine Image Sets", "run_combine"),
-       ("show_converter",          "Folder", "Image Converter",    "run_converter"),
-       ("show_duplicates",         "Folder", "Find Duplicates",    "run_duplicates"),
-       ("show_pdf_combiner",       "Folder", "PDF Combiner",       "run_pdf_combiner"),
-       ("show_pdf_splitter",       "File",   "PDF Splitter",       "run_pdf_splitter"),
-       ("show_pdf_to_images",      "File",   "PDF to Images",      "run_pdf_to_images"),
+       ("show_folders_to_pdf", "Folder", "Folders to PDF", "run_folders_to_pdf"),
+       ("show_images_to_pdf", "Folder", "Images to PDF", "run_images_to_pdf"),
+       ("show_folder_renamer", "Folder", "Folder Renamer", "run_folder_renamer"),
+       ("show_file_renamer", "Folder", "File Renamer", "run_file_renamer"),
+       ("show_combine", "Folder", "Combine Image Sets", "run_combine"),
+       ("show_converter", "Folder", "Image Converter", "run_converter"),
+       ("show_duplicates", "Folder", "Find Duplicates", "run_duplicates"),
+       ("show_pdf_combiner", "Folder", "PDF Combiner", "run_pdf_combiner"),
+       ("show_pdf_splitter", "File", "PDF Splitter", "run_pdf_splitter"),
+       ("show_pdf_to_images", "File", "PDF to Images", "run_pdf_to_images"),
    ]
 
-   def _make_button(self, parent, text, cmd):
+   TOOLTIPS = {
+       "Folders to PDF": "Combines all folders in Input into a single PDF. Each folder is treated as a chapter.",
+       "Images to PDF": "Converts all images in Input into a single PDF.",
+       "Folder Renamer": "Renames folders by extracting the number from their name. Useful for sorting chapters.",
+       "File Renamer": "Renames files by prefix, suffix, find/replace, or sequence numbering.",
+       "Combine Image Sets": "Merges multiple folders of images into one flat folder, preserving order.",
+       "Image Converter": "Converts all images in Input to a chosen format (jpg, png, webp, etc).",
+       "Find Duplicates": "Finds and optionally deletes exact duplicate images by file hash.",
+       "PDF Combiner": "Combines multiple PDFs into one.",
+       "PDF Splitter": "Splits a PDF into parts at page numbers you specify.",
+       "PDF to Images": "Converts a PDF into individual image files. Resource intensive.",
+       "Add Input": "Copies files or a folder into the Input directory for processing.",
+       "Clear Input": "Deletes everything in the Input folder. Originals are not affected.",
+       "Status": "Shows what is currently in the Input and Output folders.",
+       "Clear Log": "Clears the log display.",
+       "Clear Output": "Deletes everything in the Output folder.",
+       "Cancel Job": "Cancels the currently running job.",
+       "Config": "Set the Input and Output folder paths.",
+       "Options": "Configure behaviour, defaults, throttles, and visible buttons.",
+   }
+
+   def _show_tooltip(self, widget, text):
+       def on_enter(e):
+           x = widget.winfo_rootx() + widget.winfo_width() + 4
+           y = widget.winfo_rooty()
+           self._tooltip = tk.Toplevel(self.root)
+           self._tooltip.wm_overrideredirect(True)
+           self._tooltip.wm_geometry(f"+{x}+{y}")
+           t = self._theme()
+           lbl = tk.Label(self._tooltip, text=text, wraplength=220,
+                          justify='left', font=('Courier', 10),
+                          bg=t["btn_bg"], fg=t["fg"], padx=6, pady=4)
+           lbl.pack()
+
+       def on_leave(e):
+           if hasattr(self, '_tooltip') and self._tooltip:
+               self._tooltip.destroy()
+               self._tooltip = None
+
+       widget.bind("<Enter>", on_enter)
+       widget.bind("<Leave>", on_leave)
+
+
+   def _make_button(self, parent, text, cmd, tooltip=None):
        t = self._theme()
-       f = tk.Frame(parent, bg=t["fg"], padx=1, pady=1)
+       row = tk.Frame(parent, bg=t["bg"])
+       row.pack(pady=2, fill='x')
+
+       f = tk.Frame(row, bg=t["fg"], padx=1, pady=1)
        lbl = tk.Label(f, text=text, bg=t["bg"], fg=t["fg"],
                       font=('', 10), width=22, cursor="hand2")
        lbl.pack()
        lbl.bind("<Button-1>", lambda e: cmd())
-       lbl.bind("<Enter>",    lambda e: lbl.configure(bg=self._theme()["hover"]))
-       lbl.bind("<Leave>",    lambda e: lbl.configure(bg=self._theme()["bg"]))
-       f.pack(pady=2)
+       lbl.bind("<Enter>", lambda e: lbl.configure(bg=self._theme()["hover"]))
+       lbl.bind("<Leave>", lambda e: lbl.configure(bg=self._theme()["bg"]))
+       f.pack(side='left')
+
+       if tooltip:
+           info = tk.Label(row, text="i", bg=t["bg"], fg=t["hint_fg"],
+                           font=('', 9), cursor="hand2", padx=2)
+           info.pack(side='left', padx=(3, 0))
+           info.bind("<Enter>", lambda e: info.configure(bg=self._theme()["hover"]))
+           info.bind("<Leave>", lambda e: info.configure(bg=self._theme()["bg"]))
+           self._show_tooltip(info, tooltip)
+
        return f, lbl
 
    def _rebuild_buttons(self):
@@ -520,8 +575,7 @@ This app is under active development by 1 dev and its fellow large language mode
        for section_label, cmds in all_sections:
            tk.Label(self._btn_frame, text=section_label, font=('', 10, 'bold')).pack(anchor='w', pady=(8, 2))
            for label, cmd in cmds:
-               self._make_button(self._btn_frame, label, cmd)
-
+               self._make_button(self._btn_frame, label, cmd, tooltip=self.TOOLTIPS.get(label))
        self._apply_theme()
 
    def _run(self, fn):
