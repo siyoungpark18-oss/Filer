@@ -160,28 +160,48 @@ class App:
        except Exception:
            return 0
 
+   def _is_configured(self):
+       inp = self.config.get("input", "")
+       out = self.config.get("output", "")
+       return bool(inp and out and Path(inp).exists() and Path(out).exists())
+
    def _update_button_states(self):
+       t = self._theme()
+       configured = self._is_configured()
+
+       # ⚠ badge on Add Input and Config
+       for label, lbl in self._btn_labels.items():
+           try:
+               if label in ("Add Input", "Config"):
+                   if not configured:
+                       current = lbl.cget("text")
+                       if not current.startswith("⚠ "):
+                           lbl.configure(text=f"⚠ {label}")
+                   else:
+                       lbl.configure(text=label)
+           except tk.TclError:
+               pass
+
+       # Existing empty-input dimming (unchanged logic)
        if not self.config.get("guide_empty_input", True):
-           # Feature disabled — restore all tool buttons to normal fg
-           t = self._theme()
            for label, lbl in self._btn_labels.items():
                try:
-                   lbl.configure(fg=t["fg"], bg=t["bg"])
+                   if not label.startswith("⚠ "):
+                       lbl.configure(fg=t["fg"], bg=t["bg"])
                except tk.TclError:
                    pass
            return
 
-       t = self._theme()
        count = self._get_input_count()
        empty = count == 0
 
        for label, lbl in self._btn_labels.items():
            try:
-               if label == "Add Input":
+               bare = label.replace("⚠ ", "")
+               if bare == "Add Input":
                    lbl.configure(fg=t["fg"], bg=t["hover"] if empty else t["bg"])
-               elif label in TOOL_LABELS:
+               elif bare in TOOL_LABELS:
                    lbl.configure(fg=t["hint_fg"] if empty else t["fg"], bg=t["bg"])
-               # Utility/preference buttons: untouched
            except tk.TclError:
                pass
 
@@ -713,38 +733,71 @@ This app is under active development by 1 dev and its fellow large language mode
        win.title("Config")
        win.resizable(False, False)
 
-       labels = [("input", "Input directory"), ("output", "Output directory")]
-       entries = {}
-       for i, (key, label) in enumerate(labels):
-           tk.Label(win, text=label, anchor='w').grid(
-               row=i, column=0, padx=10, pady=4, sticky='w')
-           e = tk.Entry(win, width=50)
-           e.insert(0, self.config.get(key, ""))
-           e.grid(row=i, column=1, padx=10, pady=4)
-           entries[key] = e
+       paths = {
+           "input": tk.StringVar(value=self.config.get("input", "")),
+           "output": tk.StringVar(value=self.config.get("output", "")),
+       }
 
-       def save():
-           for key, entry in entries.items():
-               val = entry.get().strip()
+       def pick(key):
+           chosen = filedialog.askdirectory(title=f"Select {key} directory")
+           if chosen:
+               paths[key].set(chosen)
+               _refresh_labels()
+
+       def set_both():
+           inp = paths["input"].get()
+           if not inp:
+               pick("input")
+               inp = paths["input"].get()
+           if inp:
+               paths["output"].set(inp)
+               _refresh_labels()
+
+       def _refresh_labels():
+           for key in ("input", "output"):
+               val = paths[key].get()
+               lbl_vals[key].configure(text=val if val else "  (not set)")
+
+       row = 0
+       lbl_vals = {}
+       for key, title in (("input", "Input directory"), ("output", "Output directory")):
+           tk.Label(win, text=title, anchor='w').grid(
+               row=row, column=0, padx=10, pady=4, sticky='w')
+           row += 1
+           val = paths[key].get()
+           lbl = tk.Entry(win, width=50, readonlybackground='white')
+           lbl.insert(0, val if val else "")
+           lbl.configure(state='readonly')
+           lbl.grid(row=row, column=0, padx=10, pady=4)
+           lbl_vals[key] = lbl
+           tk.Button(win, text="Browse…", command=lambda k=key: pick(k)).grid(
+               row=row, column=1, padx=(0, 10), pady=4)
+           row += 1
+
+       def _refresh_labels():
+           for key in ("input", "output"):
+               val = paths[key].get()
+               lbl_vals[key].configure(state='normal')
+               lbl_vals[key].delete(0, tk.END)
+               lbl_vals[key].insert(0, val if val else "")
+               lbl_vals[key].configure(state='readonly')
+
+       btn = tk.Frame(win)
+       btn.grid(row=row, column=0, columnspan=2, pady=10)
+       for txt, cmd in [("Set Both", set_both), ("Save", lambda: _save()), ("Cancel", win.destroy)]:
+           tk.Button(btn, text=txt, command=cmd).pack(side='left', padx=5)
+
+       def _save():
+           for key in ("input", "output"):
+               val = paths[key].get().strip()
                if val and Path(val).exists():
                    self.config[key] = val
                elif val:
                    messagebox.showwarning("Invalid Path", f"Does not exist: {val}")
                    return
            save_config(self.config)
+           self._update_button_states()
            win.destroy()
-
-       def set_all():
-           path = entries["input"].get().strip()
-           if path and Path(path).exists():
-               for e in entries.values():
-                   e.delete(0, tk.END)
-                   e.insert(0, path)
-
-       btn = tk.Frame(win)
-       btn.grid(row=len(labels), column=0, columnspan=2, pady=10)
-       for txt, cmd in [("Set All", set_all), ("Save", save), ("Cancel", win.destroy)]:
-           tk.Button(btn, text=txt, command=cmd).pack(side='left', padx=5)
 
    def open_settings(self):
        win = tk.Toplevel(self.root)
