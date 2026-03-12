@@ -500,8 +500,7 @@ This app is under active development by 1 dev and its fellow large language mode
 
        title_row = tk.Frame(left)
        title_row.pack(fill='x', pady=(0, 2))
-       tk.Label(title_row, text="File & Folder Manager", font=('', 11, 'bold')).pack(side='left')
-
+       tk.Label(title_row, text="Filer", font=('', 11, 'bold')).pack(side='left')
        def _mini_btn(parent, text_or_var, cmd, side='right', tooltip=None):
            t = self._theme()
            f = tk.Frame(parent, bg=t["fg"], padx=1, pady=1)
@@ -537,9 +536,9 @@ This app is under active development by 1 dev and its fellow large language mode
 
        _mini_btn(title_row, "?", self._show_help, tooltip="Help")
        _mini_btn(title_row, "i", self._show_docs, tooltip="Documentation")
+       _mini_btn(title_row, "⚙", self._show_preferences, tooltip="Preferences")
        self._dark_btn = _mini_btn(title_row, "🌙" if not self._dark else "☀", self._toggle_dark,
                                   tooltip="Dark Mode" if not self._dark else "Bright Mode")
-
        # Live input status label
        status_row = tk.Frame(left)
        status_row.pack(fill='x', pady=(0, 4))
@@ -686,10 +685,7 @@ This app is under active development by 1 dev and its fellow large language mode
                ("Clear Output", self.clear_output),
                ("Cancel Job",   self.cancel_job),
            ]),
-           ("Preferences", [
-               ("Config",       self.open_config),
-               ("Options",      self.open_settings),
-           ]),
+
        ]
 
        from collections import OrderedDict
@@ -827,6 +823,22 @@ This app is under active development by 1 dev and its fellow large language mode
            save_config(self.config)
            self._update_button_states()
            win.destroy()
+
+   def _show_preferences(self):
+       win = tk.Toplevel(self.root)
+       win.title("Preferences")
+       win.resizable(False, False)
+       t = self._theme()
+       win.configure(bg=t["bg"])
+
+       def btn(text, cmd):
+           tk.Button(win, text=text, command=cmd, width=20).pack(pady=6, padx=20)
+
+       tk.Label(win, text="Preferences", font=('', 11, 'bold'),
+                bg=t["bg"], fg=t["fg"]).pack(pady=(14, 4))
+       btn("Config", lambda: (win.destroy(), self.open_config()))
+       btn("Options", lambda: (win.destroy(), self.open_settings()))
+       tk.Button(win, text="Close", command=win.destroy).pack(pady=(4, 14), padx=20)
 
    def open_settings(self):
        win = tk.Toplevel(self.root)
