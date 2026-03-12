@@ -75,6 +75,14 @@ def patch_input():
    builtins.input = thread_safe_input
 
 
+# Tool button labels that should be dimmed when input is empty
+TOOL_LABELS = {
+    "Folders to PDF", "Images to PDF", "Folder Renamer", "File Renamer",
+    "Combine Image Sets", "Image Converter", "Find Duplicates",
+    "PDF Combiner", "PDF Splitter", "PDF to Images",
+}
+
+
 class App:
    def __init__(self, root):
        self.root = root
@@ -83,6 +91,10 @@ class App:
        self.config = load_config()
        self.cancel_event = threading.Event()
        self._dark = self.config.get("dark_mode", False)
+       # Track button label widgets: {text: lbl_widget}
+       self._btn_labels = {}
+       # Last known input item count for change detection
+       self._last_input_count = -1
        patch_input()
        self._build_ui()
        self._apply_theme()
@@ -100,6 +112,8 @@ class App:
            self._apply_to_widget(widget, t)
        self.log.configure(bg=t["log_bg"], fg=t["log_fg"],
                           insertbackground=t["log_fg"])
+       # Re-apply dimming after theme change
+       self._update_button_states()
 
    def _on_scroll(self, first, last):
        self._scrollbar.set(first, last)
@@ -137,12 +151,59 @@ class App:
        self._apply_theme()
        self._dark_btn.configure(text="☀" if self._dark else "🌙")
 
+   def _get_input_count(self):
+       try:
+           input_dir = get_input(self.config)
+           if not input_dir.exists():
+               return 0
+           return sum(1 for _ in input_dir.iterdir())
+       except Exception:
+           return 0
+
+   def _update_button_states(self):
+       if not self.config.get("guide_empty_input", True):
+           # Feature disabled — restore all tool buttons to normal fg
+           t = self._theme()
+           for label, lbl in self._btn_labels.items():
+               try:
+                   lbl.configure(fg=t["fg"], bg=t["bg"])
+               except tk.TclError:
+                   pass
+           return
+
+       t = self._theme()
+       count = self._get_input_count()
+       empty = count == 0
+
+       for label, lbl in self._btn_labels.items():
+           try:
+               if label == "Add Input":
+                   lbl.configure(fg=t["fg"], bg=t["hover"] if empty else t["bg"])
+               elif label in TOOL_LABELS:
+                   lbl.configure(fg=t["hint_fg"] if empty else t["fg"], bg=t["bg"])
+               # Utility/preference buttons: untouched
+           except tk.TclError:
+               pass
+
    def _poll_input(self):
+       # Handle inline input requests from background threads
        try:
            prompt = input_queue.get_nowait()
            self._show_inline_input(prompt)
        except queue.Empty:
            pass
+
+       # Update input count label and button states if count changed
+       count = self._get_input_count()
+       if count != self._last_input_count:
+           self._last_input_count = count
+           label = f"[{count} item{'s' if count != 1 else ''}]"
+           try:
+               self._input_status_lbl.configure(text=label)
+           except tk.TclError:
+               pass
+           self._update_button_states()
+
        self.root.after(50, self._poll_input)
 
    def _show_inline_input(self, prompt):
@@ -217,12 +278,13 @@ class App:
        help_text = """Filer.
 
 Filer is a file manager. 
-To be more specific, it’s specialized for image management en masse. It's meant to manage, convert, and compress folders with images or individual images in the thousands at a time and to do this with speed. 
+To be more specific, it's specialized for image management en masse. It's meant to manage, convert, and compress folders with images or individual images in the thousands at a time and to do this with speed. 
 
 And with this comes its true Niche or intended use. Ultimately, Filer is a companion to large scale Manga Piracy. To those who wish to own and obtain manga from third party sources you may find that a multitude of reasons can impede time-efficient management of what could be thousands of manga pages, each stored as an individual image. 
 
-Following is the explanation of the use cases for each tool within this Niche. I hope it’s useful in these areas at the very least.
+Following is the explanation of the use cases for each tool within this Niche. I hope it's useful in these areas at the very least.
 
+**For Information on the main interface, hover over the information button or i on the main window**
 
 
 The Intended use of each tool
@@ -257,17 +319,17 @@ A similar but different tool that also renames files. They do not necessarily ha
 
 This is a general renaming tool instead, which can replace certain parts of file names, add a prefix or suffix to the file name, or use the sequence function to sort by number similar to the file sorter. 
 
-Sequence for example would name page1, photo2, file 3, with file1, file2, file3 for example, provided you use “file” as the base in this case
+Sequence for example would name page1, photo2, file 3, with file1, file2, file3 for example, provided you use "file" as the base in this case
 
 
 Combined Image Sets
-This tool’s ability is to combine multiple folders of images into a single folder with all the images. It should keep the same order.
+This tool's ability is to combine multiple folders of images into a single folder with all the images. It should keep the same order.
 
 In the context of a manga, it would combine for example folders Volume 1, Volume 2, and Volume 3 into a single folder. Normally, you'd have to move these files manually. If they are sorted by chapter—which can reach hundreds of chapters in a manga—this can be a real time saver. 
 
 This combined image set can allow you to store entire completed works and all their chapters or volumes in 1 single folder. It would basically be a set of individual image files in a single folder. For larger works of Manga, this can mean thousands of individual image files that you would otherwise have to move manually. 
 
-The combined image set is the Ideal format for a phone, but I never saw any good reason to keep them by chapter. I personally would rather organize each image set by the name of the work. If this is your stance as well, you’re in luck, because this is the tool solely designed for this otherwise time consuming manual endeavor.
+The combined image set is the Ideal format for a phone, but I never saw any good reason to keep them by chapter. I personally would rather organize each image set by the name of the work. If this is your stance as well, you're in luck, because this is the tool solely designed for this otherwise time consuming manual endeavor.
 
 
 Image Converter
@@ -279,11 +341,11 @@ Finds exact image duplicates of files. Sometimes scanlation groups create scanla
 
 
 PDF combiner
-Combines multiple pdfs. Nothing impressive honestly about this one you could do this locally much in the same way you can convert images to PDFs. It's here if one needs it though. Manga can be downloaded in the form of PDF’s so if it's preferable to have them combined into a single pdf, this is the tool..
+Combines multiple pdfs. Nothing impressive honestly about this one you could do this locally much in the same way you can convert images to PDFs. It's here if one needs it though. Manga can be downloaded in the form of PDF's so if it's preferable to have them combined into a single pdf, this is the tool..
 
 
 PDF Splitter
-It splits pdfs at a certain page gap and creates both products. Each split process can split the pdf at multiple pages, and each sector of the PDF will be preserved in the output for use. Can be used to split combined volumes of manga or other media, though they usually aren't stored in PDF’s and generally books favor epubs. 
+It splits pdfs at a certain page gap and creates both products. Each split process can split the pdf at multiple pages, and each sector of the PDF will be preserved in the output for use. Can be used to split combined volumes of manga or other media, though they usually aren't stored in PDF's and generally books favor epubs. 
 
 
 PDF to Images
@@ -317,7 +379,7 @@ Clears the output folder and all of its files.
 
 
 Cancel Job:
-Cancels the current task. Since most of the tasks are so fast anyway, you likely even have time to cancel it unless the files in input are numerous. Usually, the program is so fast that you’ll just end up clearing the output if you don’t want it. 
+Cancels the current task. Since most of the tasks are so fast anyway, you likely even have time to cancel it unless the files in input are numerous. Usually, the program is so fast that you'll just end up clearing the output if you don't want it. 
 
 However, processes like PDF to Images can be slow and take forever. You can use this button to cancel the current job. Because this program can take up a lot of RAM, this should prevent the app from using your resources for too long.
 
@@ -336,13 +398,13 @@ Click Add Input and add a manga volume or whatever files you want to process.
 
 Next thing is you need to identify the process you want to apply to the files now in input and select it. Go through the instructions and process and the product will be in output.
 
-Now take the product from output and move it wherever you’d like. The Output folder is not meant to store your desired files and newer outputs will replace older outputs as a functional way of deleting them. Move them to a place you can store or if you do not like the output or made a mistake, simply hit clear output. 
+Now take the product from output and move it wherever you'd like. The Output folder is not meant to store your desired files and newer outputs will replace older outputs as a functional way of deleting them. Move them to a place you can store or if you do not like the output or made a mistake, simply hit clear output. 
 
-Once you've processed the input you can now clear the input if you don’t need it. Usually the app does this for you by default, but you can turn that off in Config, allowing you to run multiple processes on an input before having you delete it manually. Once you don’t need the input file, simply clear the input. You can check what's in the input or output with the Status button, that's what it's for.
+Once you've processed the input you can now clear the input if you don't need it. Usually the app does this for you by default, but you can turn that off in Config, allowing you to run multiple processes on an input before having you delete it manually. Once you don't need the input file, simply clear the input. You can check what's in the input or output with the Status button, that's what it's for.
 
 This program is not meant to process multiple different inputs individually and only processes the files as a whole, so once an input file is not needed in the immediate future, you should delete it so it doesn't interfere with future processes.
 
-If you want to process another set of files, then you simply add another input. Make sure to clear the input when you’re done with it, but otherwise this is about it.
+If you want to process another set of files, then you simply add another input. Make sure to clear the input when you're done with it, but otherwise this is about it.
 
 
 
@@ -412,7 +474,7 @@ This app is under active development by 1 dev and its fellow large language mode
        left.pack_propagate(False)
 
        title_row = tk.Frame(left)
-       title_row.pack(fill='x', pady=(0, 4))
+       title_row.pack(fill='x', pady=(0, 2))
        tk.Label(title_row, text="File & Folder Manager", font=('', 11, 'bold')).pack(side='left')
 
        def _mini_btn(parent, text_or_var, cmd, side='right'):
@@ -440,6 +502,16 @@ This app is under active development by 1 dev and its fellow large language mode
        _mini_btn(title_row, "?", self._show_help)
        _mini_btn(title_row, "i", self._show_docs)
        self._dark_btn = _mini_btn(title_row, "🌙" if not self._dark else "☀", self._toggle_dark)
+
+       # Live input status label
+       status_row = tk.Frame(left)
+       status_row.pack(fill='x', pady=(0, 4))
+       t = self._theme()
+       self._input_status_lbl = tk.Label(
+           status_row, text="[0 items]",
+           font=('Courier', 9), fg=t["hint_fg"], bg=t["bg"], anchor='w'
+       )
+       self._input_status_lbl.pack(side='left')
 
        self._btn_frame = tk.Frame(left)
        self._btn_frame.pack(fill='both', expand=True)
@@ -533,6 +605,9 @@ This app is under active development by 1 dev and its fellow large language mode
        lbl.bind("<Leave>", lambda e: lbl.configure(bg=self._theme()["bg"]))
        f.pack(side='left')
 
+       # Register for state management
+       self._btn_labels[text] = lbl
+
        if tooltip:
            info = tk.Label(row, text="i", bg=t["bg"], fg=t["hint_fg"],
                            font=('', 9), cursor="hand2", padx=2)
@@ -544,6 +619,7 @@ This app is under active development by 1 dev and its fellow large language mode
        return f, lbl
 
    def _rebuild_buttons(self):
+       self._btn_labels.clear()
        for w in self._btn_frame.winfo_children():
            w.destroy()
 
@@ -576,7 +652,9 @@ This app is under active development by 1 dev and its fellow large language mode
            tk.Label(self._btn_frame, text=section_label, font=('', 10, 'bold')).pack(anchor='w', pady=(8, 2))
            for label, cmd in cmds:
                self._make_button(self._btn_frame, label, cmd, tooltip=self.TOOLTIPS.get(label))
+
        self._apply_theme()
+       self._update_button_states()
 
    def _run(self, fn):
        self.cancel_event.clear()
@@ -668,16 +746,17 @@ This app is under active development by 1 dev and its fellow large language mode
        win.resizable(False, False)
 
        fields = [
-           ("auto_clear_input", "Auto Clear Input After Job",    "check", None),
-           ("replace_output",   "Replace Output Each Run",       "check", None),
-           ("sort_output",      "Sort Output by Operation Type", "check", None),
-           ("default_sort",     "Default Sort Mode",             "combo", ["ask", "natural", "none"]),
-           ("default_dpi",      "Default DPI (PDF to Images)",   "combo", ["ask", "72", "96", "150", "200", "300", "600"]),
-           ("default_img_fmt",  "Default Image Format",          "combo", ["ask", "jpg", "png", "webp", "bmp", "tiff"]),
-           ("hotkey_continue",  "Continue Hotkey",               "combo", ["Return", "space", "Right"]),
-           ("hotkey_cancel",    "Cancel Hotkey",                 "combo", ["Escape", "space", "Left"]),
-           ("throttle_cpu",     "Throttle: Max CPU % (0 = off)",      "combo", ["0", "50", "60", "70", "80", "90"]),
-           ("throttle_mem",     "Throttle: Max Memory % (0 = off)",   "combo", ["0", "50", "60", "70", "80", "90"]),
+           ("auto_clear_input",   "Auto Clear Input After Job",        "check", None),
+           ("replace_output",     "Replace Output Each Run",           "check", None),
+           ("sort_output",        "Sort Output by Operation Type",     "check", None),
+           ("guide_empty_input",  "Dim out Tools when Input Empty",    "check", None),
+           ("default_sort",       "Default Sort Mode",                 "combo", ["ask", "natural", "none"]),
+           ("default_dpi",        "Default DPI (PDF to Images)",       "combo", ["ask", "72", "96", "150", "200", "300", "600"]),
+           ("default_img_fmt",    "Default Image Format",              "combo", ["ask", "jpg", "png", "webp", "bmp", "tiff"]),
+           ("hotkey_continue",    "Continue Hotkey",                   "combo", ["Return", "space", "Right"]),
+           ("hotkey_cancel",      "Cancel Hotkey",                     "combo", ["Escape", "space", "Left"]),
+           ("throttle_cpu",       "Throttle: Max CPU % (0 = off)",     "combo", ["0", "50", "60", "70", "80", "90"]),
+           ("throttle_mem",       "Throttle: Max Memory % (0 = off)",  "combo", ["0", "50", "60", "70", "80", "90"]),
        ]
 
        row = 0
@@ -690,7 +769,7 @@ This app is under active development by 1 dev and its fellow large language mode
            tk.Label(win, text=label, anchor='w').grid(
                row=row, column=0, padx=10, pady=5, sticky='w')
            if typ == "check":
-               v = tk.BooleanVar(value=bool(self.config.get(key, False)))
+               v = tk.BooleanVar(value=bool(self.config.get(key, True if key == "guide_empty_input" else False)))
                tk.Checkbutton(win, variable=v).grid(row=row, column=1, padx=10, sticky='w')
            else:
                v = tk.StringVar(value=str(self.config.get(key, opts[0])))
@@ -715,7 +794,7 @@ This app is under active development by 1 dev and its fellow large language mode
        def save():
            for key, v in vars_.items():
                val = v.get()
-               if key in ("auto_clear_input", "replace_output", "sort_output"):
+               if key in ("auto_clear_input", "replace_output", "sort_output", "guide_empty_input"):
                    self.config[key] = bool(val)
                elif key in ("throttle_cpu", "throttle_mem"):
                    self.config[key] = int(str(val).split()[0])
