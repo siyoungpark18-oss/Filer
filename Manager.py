@@ -184,6 +184,7 @@ def folders_to_pdf(config, cancel=None):
        return _cancel()
    out = get_output(config, "folders to pdf", run_name)
    print(f"  Output: {out}")
+   print(f"  Note: cannot be cancelled once PDF conversion starts.")
 
 
    image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'}
@@ -237,6 +238,7 @@ def images_to_pdf(config, cancel=None):
        return _cancel()
    out = get_output(config, "images to pdf", run_name)
    print(f"  Output: {out}")
+   print(f"  Note: cannot be cancelled once PDF conversion starts.")
 
 
    image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'}
@@ -840,6 +842,7 @@ def pdf_splitter(config, cancel=None):
        return _cancel()
    out = get_output(config, "pdf split", run_name)
    print(f"  Output: {out}")
+   print(f"  Note: cannot be cancelled once PDF conversion starts.")
 
 
    # Use rglob for consistency with other functions
