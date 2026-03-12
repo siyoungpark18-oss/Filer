@@ -6,6 +6,7 @@ import queue
 import sys
 import io
 import shutil
+import webbrowser
 
 
 from Manager import (
@@ -364,50 +365,44 @@ This app is under active development by 1 dev and its fellow large language mode
                                         padx=10, pady=10)
        text.pack(fill='both', expand=True)
 
-       docs_text = """Filer.
+       def insert_link(url):
+           tag = f"link_{url}"
+           text.tag_configure(tag, foreground="blue", underline=True)
+           text.insert(tk.END, url, (tag,))
+           text.tag_bind(tag, "<Button-1>", lambda e, u=url: webbrowser.open(u))
+           text.tag_bind(tag, "<Enter>", lambda e: text.configure(cursor="hand2"))
+           text.tag_bind(tag, "<Leave>", lambda e: text.configure(cursor=""))
 
-Filer is a file manager. It's an open source project that specializes in managing image files in bulk. It's cool because you can manage files and the way they are formatted locally—no data or analytics are used and no data leaves your computer.
-
-To access the Github Page
-https://github.com/siyoungpark18-oss/Filer?tab=AGPL-3.0-1-ov-file 
-
-
-To access the .dmg or disk image for MacOS users visit the link to download it here:
-https://drive.google.com/drive/u/2/folders/1gjRlr2hV7RjLBTGlGs2SqQgKNaW4T0Il 
-Currently, to install its modern Windows or Linux counterpart, you must download the source files on github and run the builders. 
-
-
-To view previous versions of Filer, visit the link https://drive.google.com/drive/u/2/folders/1jT_qMHEpWVczcIwBHTYJt1QkrE6WL8pb 
-
-Filer—whats it for?
-While there are essentially an infinite number of file managers, Filer specializes in a few niches and carries a few advantages that I—the developer—think makes it worth considering in a few use cases.
-
-This app works with copies—when using the app, feel free to delete the inputs and outputs as necessary because the original files are not lost. These utility functions exist to be used. 
-
-It's to be noted that only 1 file or folder can be attached at a time! It is very much possible to attach multiple files or folders, but it can be somewhat tedius. To process multiple files or folders at a time, it's suggested that you move all of the files you would like to manage into 1 folder beforehand and attach that folder all at once.
-
-It is also suggested that there are only a few inputs at a time.With all processes the tool is capable of, you cannot pick the files within the input that are to be processed. It will process all of the files in the input automatically, and this is intentional. To avoid processing multiple files that are unrelated, you should clear the input periodically when you’re done with the current files in input, and this is the intended workflow.
-
-It has a few advantages, mainly that its
-- Open source—all the source files are on its github page available for download
-- Files are Locally Managed—there is no movement of any data or analytics
-- Minimalistic—the user interface is simple and quick to navigate once learned 
-- Files are not uploaded, but rather copied into folders—This makes all file and folder processes much faster. 
-Because of this, you can also directly view the input and output folders and move files yourself separate from the interface.
-
-This tool specializes in speed and volume—It may be a little more difficult to navigate for a beginner.
-
-
-It has its disadvantages though with
-- Less Graphics—its probably not the easiest software out there to learn initially
-- Reliance on Keybinds—The software sometimes relies on keybinds for its request of input to avoid excessive pop-ups. This comes across as difficult to use.
-- Because of its speed, the Filer app can under certain circumstances use up all the available RAM resources and cause a computer to crash. This can be mitigated by the CPU and RAM throttles in the configuration to change it.
-- Only one folder or file can be attached at a time!!!
-
-"""
-
-       text.insert('1.0', docs_text)
+       text.configure(state='normal')
+       text.insert(tk.END, "Filer\n\n")
+       text.insert(tk.END,
+                   "Filer is a file manager. It's an open source project that specializes in managing image files in bulk. It's cool because you can manage files and the way they are formatted locally—no data or analytics are used and no data leaves your computer.\n\n")
+       text.insert(tk.END, "To access the Github Page\n")
+       insert_link("https://github.com/siyoungpark18-oss/Filer?tab=AGPL-3.0-1-ov-file")
+       text.insert(tk.END, "\n\n\n")
+       text.insert(tk.END, "To access the .dmg or disk image for MacOS users visit the link to download it here:\n")
+       insert_link("https://drive.google.com/drive/u/2/folders/1gjRlr2hV7RjLBTGlGs2SqQgKNaW4T0Il")
+       text.insert(tk.END,
+                   "\nCurrently, to install its modern Windows or Linux counterpart, you must download the source files on github and run the builders.\n\n\n")
+       text.insert(tk.END, "To view previous versions of Filer, visit the link ")
+       insert_link("https://drive.google.com/drive/u/2/folders/1jT_qMHEpWVczcIwBHTYJt1QkrE6WL8pb")
+       text.insert(tk.END, "\n\n")
+       text.insert(tk.END,
+                   "Filer—whats it for?\nWhile there are essentially an infinite number of file managers, Filer specializes in a few niches and carries a few advantages that I—the developer—think makes it worth considering in a few use cases.\n\n")
+       text.insert(tk.END,
+                   "This app works with copies—when using the app, feel free to delete the inputs and outputs as necessary because the original files are not lost. These utility functions exist to be used.\n\n")
+       text.insert(tk.END,
+                   "It's to be noted that only 1 file or folder can be attached at a time! It is very much possible to attach multiple files or folders, but it can be somewhat tedius. To process multiple files or folders at a time, it's suggested that you move all of the files you would like to manage into 1 folder beforehand and attach that folder all at once.\n\n")
+       text.insert(tk.END,
+                   "It is also suggested that there are only a few inputs at a time. With all processes the tool is capable of, you cannot pick the files within the input that are to be processed. It will process all of the files in the input automatically, and this is intentional. To avoid processing multiple files that are unrelated, you should clear the input periodically when you're done with the current files in input, and this is the intended workflow.\n\n")
+       text.insert(tk.END,
+                   "It has a few advantages, mainly that its\n- Open source—all the source files are on its github page available for download\n- Files are Locally Managed—there is no movement of any data or analytics\n- Minimalistic—the user interface is simple and quick to navigate once learned\n- Files are not uploaded, but rather copied into folders—This makes all file and folder processes much faster.\nBecause of this, you can also directly view the input and output folders and move files yourself separate from the interface.\n\n")
+       text.insert(tk.END,
+                   "This tool specializes in speed and volume—It may be a little more difficult to navigate for a beginner.\n\n\n")
+       text.insert(tk.END,
+                   "It has its disadvantages though with\n- Less Graphics—its probably not the easiest software out there to learn initially\n- Reliance on Keybinds—The software sometimes relies on keybinds for its request of input to avoid excessive pop-ups. This comes across as difficult to use.\n- Because of its speed, the Filer app can under certain circumstances use up all the available RAM resources and cause a computer to crash. This can be mitigated by the CPU and RAM throttles in the configuration to change it.\n- Only one folder or file can be attached at a time!!!\n")
        text.configure(state='disabled')
+
        tk.Button(win, text="Close", command=win.destroy).pack(pady=8)
 
 
