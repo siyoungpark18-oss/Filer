@@ -517,7 +517,11 @@ This app is under active development by 1 dev and its fellow large language mode
 
        self._right = tk.Frame(self.root)
        self._right.pack(side='left', fill='both', expand=True, padx=(0, 10), pady=10)
-       tk.Label(self._right, text="Log", font=('', 11, 'bold')).pack(anchor='w')
+       log_header = tk.Frame(self._right)
+       log_header.pack(fill='x')
+       tk.Label(log_header, text="Log", font=('', 11, 'bold')).pack(side='left')
+       self._status_lbl = tk.Label(log_header, text="", font=('Courier', 9))
+       self._status_lbl.pack(side='left', padx=(8, 0))
 
        log_frame = tk.Frame(self._right)
        log_frame.pack(fill='both', expand=True)
@@ -658,11 +662,14 @@ This app is under active development by 1 dev and its fellow large language mode
    def _run(self, fn):
        self.cancel_event.clear()
        self._job_running = True
+       self.root.after(0, lambda: self._status_lbl.configure(text="● Running..."))
+
        def wrapper():
            try:
                fn()
            finally:
                self._job_running = False
+               self.root.after(0, lambda: self._status_lbl.configure(text=""))
        threading.Thread(target=wrapper, daemon=True).start()
 
    def cancel_job(self):
