@@ -150,6 +150,12 @@ class App:
        save_config(self.config)
        self._apply_theme()
        self._dark_btn.configure(text="☀" if self._dark else "🌙")
+       # Rebind tooltip to reflect new mode label
+       new_tip = "Bright Mode" if self._dark else "Dark Mode"
+       self._dark_btn.bind("<Enter>", lambda e: (
+           self._dark_btn.configure(bg=self._theme()["hover"]),
+           self._show_tooltip_popup(self._dark_btn, new_tip)
+       ))
 
    def _get_input_count(self):
        try:
@@ -496,7 +502,7 @@ This app is under active development by 1 dev and its fellow large language mode
        title_row.pack(fill='x', pady=(0, 2))
        tk.Label(title_row, text="File & Folder Manager", font=('', 11, 'bold')).pack(side='left')
 
-       def _mini_btn(parent, text_or_var, cmd, side='right'):
+       def _mini_btn(parent, text_or_var, cmd, side='right', tooltip=None):
            t = self._theme()
            f = tk.Frame(parent, bg=t["fg"], padx=1, pady=1)
            lbl = tk.Label(f, bg=t["bg"], fg=t["fg"], font=('', 10), width=2, cursor="hand2")
@@ -515,12 +521,24 @@ This app is under active development by 1 dev and its fellow large language mode
            lbl.bind("<Button-1>", on_click)
            lbl.bind("<Enter>", lambda e: lbl.configure(bg=self._theme()["hover"]))
            lbl.bind("<Leave>", lambda e: lbl.configure(bg=self._theme()["bg"]))
+
+           if tooltip:
+               def show_tip(e):
+                   self._show_tooltip_popup(lbl, tooltip)
+               def hide_tip(e):
+                   if hasattr(self, '_tooltip') and self._tooltip:
+                       self._tooltip.destroy()
+                       self._tooltip = None
+               lbl.bind("<Enter>", lambda e: (lbl.configure(bg=self._theme()["hover"]), show_tip(e)))
+               lbl.bind("<Leave>", lambda e: (lbl.configure(bg=self._theme()["bg"]), hide_tip(e)))
+
            f.pack(side=side, padx=(2, 0))
            return lbl
 
-       _mini_btn(title_row, "?", self._show_help)
-       _mini_btn(title_row, "i", self._show_docs)
-       self._dark_btn = _mini_btn(title_row, "🌙" if not self._dark else "☀", self._toggle_dark)
+       _mini_btn(title_row, "?", self._show_help, tooltip="Help")
+       _mini_btn(title_row, "i", self._show_docs, tooltip="Documentation")
+       self._dark_btn = _mini_btn(title_row, "🌙" if not self._dark else "☀", self._toggle_dark,
+                                  tooltip="Dark Mode" if not self._dark else "Bright Mode")
 
        # Live input status label
        status_row = tk.Frame(left)
@@ -613,6 +631,17 @@ This app is under active development by 1 dev and its fellow large language mode
        widget.bind("<Enter>", on_enter)
        widget.bind("<Leave>", on_leave)
 
+   def _show_tooltip_popup(self, widget, text):
+       if hasattr(self, '_tooltip') and self._tooltip:
+           self._tooltip.destroy()
+       x = widget.winfo_rootx() + widget.winfo_width() + 4
+       y = widget.winfo_rooty()
+       self._tooltip = tk.Toplevel(self.root)
+       self._tooltip.wm_overrideredirect(True)
+       self._tooltip.wm_geometry(f"+{x}+{y}")
+       t = self._theme()
+       tk.Label(self._tooltip, text=text, font=('Courier', 10),
+                bg=t["btn_bg"], fg=t["fg"], padx=6, pady=4).pack()
 
    def _make_button(self, parent, text, cmd, tooltip=None):
        t = self._theme()
