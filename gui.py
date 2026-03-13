@@ -536,7 +536,7 @@ This app is under active development by 1 dev and its fellow large language mode
 
        _mini_btn(title_row, "?", self._show_help, tooltip="Help")
        _mini_btn(title_row, "i", self._show_docs, tooltip="Documentation")
-       _mini_btn(title_row, "⚙", self._show_preferences, tooltip="Preferences")
+       _mini_btn(title_row, "≡", self._show_preferences, tooltip="Preferences")
        self._dark_btn = _mini_btn(title_row, "🌙" if not self._dark else "☀", self._toggle_dark,
                                   tooltip="Dark Mode" if not self._dark else "Bright Mode")
        # Live input status label
@@ -753,21 +753,26 @@ This app is under active development by 1 dev and its fellow large language mode
                print(f"Failed to delete {item.name}: {e}")
        print("Input cleared.")
 
-   def open_config(self):
+   def _show_preferences(self):
        win = tk.Toplevel(self.root)
-       win.title("Config")
+       win.title("Preferences")
        win.resizable(False, False)
+
+       # ── Config section ───────────────────────────────────────────────────
+       tk.Label(win, text="Config", font=('', 10, 'bold'), anchor='w').grid(
+           row=0, column=0, columnspan=2, padx=10, pady=(14, 2), sticky='w')
 
        paths = {
            "input": tk.StringVar(value=self.config.get("input", "")),
            "output": tk.StringVar(value=self.config.get("output", "")),
        }
+       lbl_vals = {}
 
        def pick(key):
            chosen = filedialog.askdirectory(title=f"Select {key} directory")
            if chosen:
                paths[key].set(chosen)
-               _refresh_labels()
+               refresh()
 
        def set_both():
            inp = paths["input"].get()
@@ -776,30 +781,9 @@ This app is under active development by 1 dev and its fellow large language mode
                inp = paths["input"].get()
            if inp:
                paths["output"].set(inp)
-               _refresh_labels()
+               refresh()
 
-       def _refresh_labels():
-           for key in ("input", "output"):
-               val = paths[key].get()
-               lbl_vals[key].configure(text=val if val else "  (not set)")
-
-       row = 0
-       lbl_vals = {}
-       for key, title in (("input", "Input directory"), ("output", "Output directory")):
-           tk.Label(win, text=title, anchor='w').grid(
-               row=row, column=0, padx=10, pady=4, sticky='w')
-           row += 1
-           val = paths[key].get()
-           lbl = tk.Entry(win, width=50, readonlybackground='white')
-           lbl.insert(0, val if val else "")
-           lbl.configure(state='readonly')
-           lbl.grid(row=row, column=0, padx=10, pady=4)
-           lbl_vals[key] = lbl
-           tk.Button(win, text="Browse…", command=lambda k=key: pick(k)).grid(
-               row=row, column=1, padx=(0, 10), pady=4)
-           row += 1
-
-       def _refresh_labels():
+       def refresh():
            for key in ("input", "output"):
                val = paths[key].get()
                lbl_vals[key].configure(state='normal')
@@ -807,12 +791,85 @@ This app is under active development by 1 dev and its fellow large language mode
                lbl_vals[key].insert(0, val if val else "")
                lbl_vals[key].configure(state='readonly')
 
-       btn = tk.Frame(win)
-       btn.grid(row=row, column=0, columnspan=2, pady=10)
-       for txt, cmd in [("Set Both", set_both), ("Save", lambda: _save()), ("Cancel", win.destroy)]:
-           tk.Button(btn, text=txt, command=cmd).pack(side='left', padx=5)
+       r = 1
+       for key, title in (("input", "Input directory"), ("output", "Output directory")):
+           tk.Label(win, text=title, anchor='w').grid(
+               row=r, column=0, padx=10, pady=2, sticky='w')
+           r += 1
+           val = paths[key].get()
+           e = tk.Entry(win, width=46, readonlybackground='white')
+           e.insert(0, val)
+           e.configure(state='readonly')
+           e.grid(row=r, column=0, padx=10, pady=2, sticky='w')
+           lbl_vals[key] = e
+           tk.Button(win, text="Browse…", command=lambda k=key: pick(k)).grid(
+               row=r, column=1, padx=(0, 10), pady=2)
+           r += 1
 
-       def _save():
+       sb_frame = tk.Frame(win)
+       sb_frame.grid(row=r, column=0, columnspan=2, pady=(4, 2), sticky='w', padx=10)
+       tk.Button(sb_frame, text="Set Both", command=set_both).pack(side='left')
+       r += 1
+
+       # ── Divider ──────────────────────────────────────────────────────────
+       tk.Frame(win, bg='gray', height=1).grid(
+           row=r, column=0, columnspan=2, sticky='ew', padx=10, pady=(10, 0))
+       r += 1
+
+       # ── Options section ──────────────────────────────────────────────────
+       tk.Label(win, text="Options", font=('', 10, 'bold'), anchor='w').grid(
+           row=r, column=0, columnspan=2, padx=10, pady=(10, 2), sticky='w')
+       r += 1
+
+       fields = [
+           ("auto_clear_input", "Auto Clear Input After Job", "check", None),
+           ("replace_output", "Replace Output Each Run", "check", None),
+           ("sort_output", "Sort Output by Operation Type", "check", None),
+           ("guide_empty_input", "Dim Tools when Input Empty", "check", None),
+           ("show_tooltips", "Show Tooltip Hints", "check", None),
+           ("default_sort", "Default Sort Mode", "combo", ["ask", "natural", "none"]),
+           ("default_dpi", "Default DPI (PDF to Images)", "combo", ["ask", "72", "96", "150", "200", "300", "600"]),
+           ("default_img_fmt", "Default Image Format", "combo", ["ask", "jpg", "png", "webp", "bmp", "tiff"]),
+           ("hotkey_continue", "Continue Hotkey", "combo", ["Return", "space", "Right"]),
+           ("hotkey_cancel", "Cancel Hotkey", "combo", ["Escape", "space", "Left"]),
+           ("throttle_cpu", "Throttle: Max CPU % (0 = off)", "combo", ["0", "50", "60", "70", "80", "90"]),
+           ("throttle_mem", "Throttle: Max Memory % (0 = off)", "combo", ["0", "50", "60", "70", "80", "90"]),
+       ]
+
+       vars_ = {}
+       for key, label, typ, opts in fields:
+           tk.Label(win, text=label, anchor='w').grid(
+               row=r, column=0, padx=10, pady=3, sticky='w')
+           if typ == "check":
+               v = tk.BooleanVar(value=bool(self.config.get(
+                   key, True if key in ("guide_empty_input", "show_tooltips") else False)))
+               tk.Checkbutton(win, variable=v).grid(row=r, column=1, padx=10, sticky='w')
+           else:
+               v = tk.StringVar(value=str(self.config.get(key, opts[0])))
+               ttk.Combobox(win, textvariable=v, values=opts, state='readonly', width=20).grid(
+                   row=r, column=1, padx=10, sticky='w')
+           vars_[key] = v
+           r += 1
+
+       # ── Visible Buttons ──────────────────────────────────────────────────
+       tk.Frame(win, bg='gray', height=1).grid(
+           row=r, column=0, columnspan=2, sticky='ew', padx=10, pady=(10, 0))
+       r += 1
+       tk.Label(win, text="Visible Buttons", font=('', 10, 'bold'), anchor='w').grid(
+           row=r, column=0, columnspan=2, padx=10, pady=(10, 2), sticky='w')
+       r += 1
+
+       btn_vars = {}
+       for key, section, label, _ in self.TOGGLEABLE:
+           v = tk.BooleanVar(value=bool(self.config.get(key, True)))
+           tk.Label(win, text=f"{label}  ({section})", anchor='w').grid(
+               row=r, column=0, padx=10, pady=2, sticky='w')
+           tk.Checkbutton(win, variable=v).grid(row=r, column=1, padx=10, sticky='w')
+           btn_vars[key] = v
+           r += 1
+
+       # ── Save / Cancel ────────────────────────────────────────────────────
+       def save():
            for key in ("input", "output"):
                val = paths[key].get().strip()
                if val and Path(val).exists():
@@ -820,82 +877,10 @@ This app is under active development by 1 dev and its fellow large language mode
                elif val:
                    messagebox.showwarning("Invalid Path", f"Does not exist: {val}")
                    return
-           save_config(self.config)
-           self._update_button_states()
-           win.destroy()
-
-   def _show_preferences(self):
-       win = tk.Toplevel(self.root)
-       win.title("Preferences")
-       win.resizable(False, False)
-       t = self._theme()
-       win.configure(bg=t["bg"])
-
-       def btn(text, cmd):
-           tk.Button(win, text=text, command=cmd, width=20).pack(pady=6, padx=20)
-
-       tk.Label(win, text="Preferences", font=('', 11, 'bold'),
-                bg=t["bg"], fg=t["fg"]).pack(pady=(14, 4))
-       btn("Config", lambda: (win.destroy(), self.open_config()))
-       btn("Options", lambda: (win.destroy(), self.open_settings()))
-       tk.Button(win, text="Close", command=win.destroy).pack(pady=(4, 14), padx=20)
-
-   def open_settings(self):
-       win = tk.Toplevel(self.root)
-       win.title("Options")
-       win.resizable(False, False)
-
-       fields = [
-           ("auto_clear_input",   "Auto Clear Input After Job",        "check", None),
-           ("replace_output",     "Replace Output Each Run",           "check", None),
-           ("sort_output",        "Sort Output by Operation Type",     "check", None),
-           ("guide_empty_input", "Dim out Tools when Input Empty",     "check", None),
-           ("show_tooltips", "Show Tooltip Hints",                     "check", None),
-           ("default_sort",       "Default Sort Mode",                 "combo", ["ask", "natural", "none"]),
-           ("default_dpi",        "Default DPI (PDF to Images)",       "combo", ["ask", "72", "96", "150", "200", "300", "600"]),
-           ("default_img_fmt",    "Default Image Format",              "combo", ["ask", "jpg", "png", "webp", "bmp", "tiff"]),
-           ("hotkey_continue",    "Continue Hotkey",                   "combo", ["Return", "space", "Right"]),
-           ("hotkey_cancel",      "Cancel Hotkey",                     "combo", ["Escape", "space", "Left"]),
-           ("throttle_cpu",       "Throttle: Max CPU % (0 = off)",     "combo", ["0", "50", "60", "70", "80", "90"]),
-           ("throttle_mem",       "Throttle: Max Memory % (0 = off)",  "combo", ["0", "50", "60", "70", "80", "90"]),
-       ]
-
-       row = 0
-       tk.Label(win, text="General", font=('', 10, 'bold'), anchor='w').grid(
-           row=row, column=0, columnspan=2, padx=10, pady=(10, 2), sticky='w')
-       row += 1
-
-       vars_ = {}
-       for key, label, typ, opts in fields:
-           tk.Label(win, text=label, anchor='w').grid(
-               row=row, column=0, padx=10, pady=5, sticky='w')
-           if typ == "check":
-               v = tk.BooleanVar(value=bool(self.config.get(key, True if key in ("guide_empty_input", "show_tooltips") else False)))
-               tk.Checkbutton(win, variable=v).grid(row=row, column=1, padx=10, sticky='w')
-           else:
-               v = tk.StringVar(value=str(self.config.get(key, opts[0])))
-               ttk.Combobox(win, textvariable=v, values=opts, state='readonly', width=20).grid(
-                   row=row, column=1, padx=10, sticky='w')
-           vars_[key] = v
-           row += 1
-
-       tk.Label(win, text="Visible Buttons", font=('', 10, 'bold'), anchor='w').grid(
-           row=row, column=0, columnspan=2, padx=10, pady=(14, 2), sticky='w')
-       row += 1
-
-       btn_vars = {}
-       for key, section, label, _ in self.TOGGLEABLE:
-           v = tk.BooleanVar(value=bool(self.config.get(key, True)))
-           tk.Label(win, text=f"{label}  ({section})", anchor='w').grid(
-               row=row, column=0, padx=10, pady=3, sticky='w')
-           tk.Checkbutton(win, variable=v).grid(row=row, column=1, padx=10, sticky='w')
-           btn_vars[key] = v
-           row += 1
-
-       def save():
            for key, v in vars_.items():
                val = v.get()
-               if key in ("auto_clear_input", "replace_output", "sort_output", "guide_empty_input", "show_tooltips"):
+               if key in ("auto_clear_input", "replace_output", "sort_output",
+                          "guide_empty_input", "show_tooltips"):
                    self.config[key] = bool(val)
                elif key in ("throttle_cpu", "throttle_mem"):
                    self.config[key] = int(str(val).split()[0])
@@ -906,13 +891,14 @@ This app is under active development by 1 dev and its fellow large language mode
            for key, v in btn_vars.items():
                self.config[key] = bool(v.get())
            save_config(self.config)
+           self._update_button_states()
            self._rebuild_buttons()
            win.destroy()
 
-       btn = tk.Frame(win)
-       btn.grid(row=row, column=0, columnspan=2, pady=10)
-       tk.Button(btn, text="Save",   command=save).pack(side='left', padx=5)
-       tk.Button(btn, text="Cancel", command=win.destroy).pack(side='left', padx=5)
+       bf = tk.Frame(win)
+       bf.grid(row=r, column=0, columnspan=2, pady=12)
+       tk.Button(bf, text="Save", command=save).pack(side='left', padx=5)
+       tk.Button(bf, text="Cancel", command=win.destroy).pack(side='left', padx=5)
 
    def pick_files(self):
        input_dir = get_input(self.config)
