@@ -1,5 +1,6 @@
 # How to run
 To run the program please clone the project and **Gui.py**
+The project should work this way on windows, mac and linux with some setup
 
 **On Mac, download the dmg, and open it to open a full standalone app**
 
