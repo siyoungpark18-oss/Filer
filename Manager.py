@@ -106,17 +106,27 @@ def resolve_sort(config):
 
 
 
+
 def throttle_if_needed(config):
-   cpu_limit = config.get("throttle_cpu", 80)
-   mem_limit = config.get("throttle_mem", 80)
-   if cpu_limit == 0 and mem_limit == 0:
-       return
-   while True:
-       cpu = psutil.cpu_percent(interval=0.2)
-       mem = psutil.virtual_memory().percent
-       if cpu <= cpu_limit and mem <= mem_limit:
-           break
-       time.sleep(0.5)
+    cpu_limit = config.get("throttle_cpu", 80)
+    mem_limit = config.get("throttle_mem", 80)
+    if cpu_limit == 0 and mem_limit == 0:
+        return
+    warned = False
+    while True:
+        cpu = psutil.cpu_percent(interval=0.2)
+        mem = psutil.virtual_memory().percent
+        if cpu <= cpu_limit and mem <= mem_limit:
+            break
+        if not warned:
+            reasons = []
+            if cpu > cpu_limit:
+                reasons.append(f"CPU at {cpu:.0f}% (limit: {cpu_limit}%)")
+            if mem > mem_limit:
+                reasons.append(f"RAM at {mem:.0f}% (limit: {mem_limit}%)")
+            print(f"  Paused — {', '.join(reasons)}. Free up resources or raise the throttle limit in Preferences.")
+            warned = True
+        time.sleep(0.5)
 
 
 
