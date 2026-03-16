@@ -1,3 +1,4 @@
+
 from PIL import Image
 from pathlib import Path
 import re
@@ -154,15 +155,23 @@ def collect_image_paths(folder, image_extensions):
 
 
 def save_pdf(image_paths, output_path):
-   if not image_paths:
-       print("  No images to save.")
-       return
-   print(f"  Converting {len(image_paths)} images → PDF...")
-   with open(output_path, 'wb') as f:
-       f.write(img2pdf.convert([str(p) for p in image_paths]))
-   size_mb = output_path.stat().st_size / (1024 * 1024)
-   print(f"  Saved: {output_path.name}  ({size_mb:.1f} MB)")
-
+    if not image_paths:
+        print("  No images to save.")
+        return
+    print(f"  Converting {len(image_paths)} images → PDF...")
+    try:
+        with open(output_path, 'wb') as f:
+            f.write(img2pdf.convert([str(p) for p in image_paths]))
+    except Exception as e:
+        print(f"  img2pdf failed ({e}), falling back to Pillow...")
+        imgs = []
+        for p in image_paths:
+            img = Image.open(p).convert("RGB")
+            imgs.append(img)
+        if imgs:
+            imgs[0].save(output_path, save_all=True, append_images=imgs[1:])
+    size_mb = output_path.stat().st_size / (1024 * 1024)
+    print(f"  Saved: {output_path.name}  ({size_mb:.1f} MB)")
 
 
 
