@@ -205,8 +205,7 @@ def folders_to_pdf(config, cancel=None):
    print(f"  Output: {out}")
    print(f"  Note: cannot be cancelled once PDF conversion starts.")
 
-
-   image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'}
+   image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp'}
    folders = sorted([f for f in src.iterdir() if f.is_dir()],
                     key=lambda x: natural_sort_key(x.name))
 
