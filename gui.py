@@ -761,10 +761,40 @@ This app is under active development by 1 dev and its fellow large language mode
    def _show_preferences(self):
        win = tk.Toplevel(self.root)
        win.title("Preferences")
-       win.resizable(False, False)
+       win.resizable(False, True)
+       win.geometry("520x600")
 
-       # ── Config section ───────────────────────────────────────────────────
-       tk.Label(win, text="Config", font=('', 10, 'bold'), anchor='w').grid(
+       # ── Scrollable container ─────────────────────────────────────────────
+       outer = tk.Frame(win)
+       outer.pack(fill='both', expand=True)
+
+       canvas = tk.Canvas(outer, highlightthickness=0)
+       scrollbar = tk.Scrollbar(outer, orient='vertical', command=canvas.yview)
+       canvas.configure(yscrollcommand=scrollbar.set)
+
+       scrollbar.pack(side='right', fill='y')
+       canvas.pack(side='left', fill='both', expand=True)
+
+       inner = tk.Frame(canvas)
+       canvas_window = canvas.create_window((0, 0), window=inner, anchor='nw')
+
+       def on_frame_configure(e):
+           canvas.configure(scrollregion=canvas.bbox('all'))
+
+       def on_canvas_configure(e):
+           canvas.itemconfig(canvas_window, width=e.width)
+
+       inner.bind('<Configure>', on_frame_configure)
+       canvas.bind('<Configure>', on_canvas_configure)
+
+       def on_mousewheel(e):
+           canvas.yview_scroll(int(-1 * (e.delta / 120)), 'units')
+
+       canvas.bind_all('<MouseWheel>', on_mousewheel)
+       win.bind('<Destroy>', lambda e: canvas.unbind_all('<MouseWheel>'))
+
+       # ── Paths section ────────────────────────────────────────────────────
+       tk.Label(inner, text="Paths", font=('', 10, 'bold'), anchor='w').grid(
            row=0, column=0, columnspan=2, padx=10, pady=(14, 2), sticky='w')
 
        paths = {
@@ -798,31 +828,31 @@ This app is under active development by 1 dev and its fellow large language mode
 
        r = 1
        for key, title in (("input", "Input directory"), ("output", "Output directory")):
-           tk.Label(win, text=title, anchor='w').grid(
+           tk.Label(inner, text=title, anchor='w').grid(
                row=r, column=0, padx=10, pady=2, sticky='w')
            r += 1
            val = paths[key].get()
-           e = tk.Entry(win, width=46, readonlybackground='white')
+           e = tk.Entry(inner, width=46, readonlybackground='white')
            e.insert(0, val)
            e.configure(state='readonly')
            e.grid(row=r, column=0, padx=10, pady=2, sticky='w')
            lbl_vals[key] = e
-           tk.Button(win, text="Browse…", command=lambda k=key: pick(k)).grid(
+           tk.Button(inner, text="Browse…", command=lambda k=key: pick(k)).grid(
                row=r, column=1, padx=(0, 10), pady=2)
            r += 1
 
-       sb_frame = tk.Frame(win)
+       sb_frame = tk.Frame(inner)
        sb_frame.grid(row=r, column=0, columnspan=2, pady=(4, 2), sticky='w', padx=10)
        tk.Button(sb_frame, text="Set Both", command=set_both).pack(side='left')
        r += 1
 
        # ── Divider ──────────────────────────────────────────────────────────
-       tk.Frame(win, bg='gray', height=1).grid(
+       tk.Frame(inner, bg='gray', height=1).grid(
            row=r, column=0, columnspan=2, sticky='ew', padx=10, pady=(10, 0))
        r += 1
 
        # ── Options section ──────────────────────────────────────────────────
-       tk.Label(win, text="Options", font=('', 10, 'bold'), anchor='w').grid(
+       tk.Label(inner, text="Options", font=('', 10, 'bold'), anchor='w').grid(
            row=r, column=0, columnspan=2, padx=10, pady=(10, 2), sticky='w')
        r += 1
 
@@ -837,6 +867,7 @@ This app is under active development by 1 dev and its fellow large language mode
            ("default_dpi", "Default DPI (PDF to Images)", "combo", ["ask", "72", "96", "150", "200", "300", "600"]),
            ("default_img_fmt", "Default Image Format", "combo", ["ask", "jpg", "png", "webp", "bmp", "tiff"]),
            ("default_dedupe_mode", "Find Duplicates: Default Mode", "combo", ["ask", "1", "2"]),
+           ("default_folders_to_pdf_mode", "Folders to PDF: Default Mode", "combo", ["ask", "combine", "individual"]),
            ("hotkey_continue", "Continue Hotkey", "combo", ["Return", "space", "Right"]),
            ("hotkey_cancel", "Cancel Hotkey", "combo", ["Escape", "space", "Left"]),
            ("throttle_cpu", "Throttle: Max CPU % (0 = off)", "combo", ["0", "50", "60", "70", "80", "90"]),
@@ -845,33 +876,33 @@ This app is under active development by 1 dev and its fellow large language mode
 
        vars_ = {}
        for key, label, typ, opts in fields:
-           tk.Label(win, text=label, anchor='w').grid(
+           tk.Label(inner, text=label, anchor='w').grid(
                row=r, column=0, padx=10, pady=3, sticky='w')
            if typ == "check":
                v = tk.BooleanVar(value=bool(self.config.get(
                    key, True if key in ("guide_empty_input", "show_tooltips") else False)))
-               tk.Checkbutton(win, variable=v).grid(row=r, column=1, padx=10, sticky='w')
+               tk.Checkbutton(inner, variable=v).grid(row=r, column=1, padx=10, sticky='w')
            else:
                v = tk.StringVar(value=str(self.config.get(key, opts[0])))
-               ttk.Combobox(win, textvariable=v, values=opts, state='readonly', width=20).grid(
+               ttk.Combobox(inner, textvariable=v, values=opts, state='readonly', width=20).grid(
                    row=r, column=1, padx=10, sticky='w')
            vars_[key] = v
            r += 1
 
        # ── Visible Buttons ──────────────────────────────────────────────────
-       tk.Frame(win, bg='gray', height=1).grid(
+       tk.Frame(inner, bg='gray', height=1).grid(
            row=r, column=0, columnspan=2, sticky='ew', padx=10, pady=(10, 0))
        r += 1
-       tk.Label(win, text="Visible Buttons", font=('', 10, 'bold'), anchor='w').grid(
+       tk.Label(inner, text="Visible Buttons", font=('', 10, 'bold'), anchor='w').grid(
            row=r, column=0, columnspan=2, padx=10, pady=(10, 2), sticky='w')
        r += 1
 
        btn_vars = {}
        for key, section, label, _ in self.TOGGLEABLE:
            v = tk.BooleanVar(value=bool(self.config.get(key, True)))
-           tk.Label(win, text=f"{label}  ({section})", anchor='w').grid(
+           tk.Label(inner, text=f"{label}  ({section})", anchor='w').grid(
                row=r, column=0, padx=10, pady=2, sticky='w')
-           tk.Checkbutton(win, variable=v).grid(row=r, column=1, padx=10, sticky='w')
+           tk.Checkbutton(inner, variable=v).grid(row=r, column=1, padx=10, sticky='w')
            btn_vars[key] = v
            r += 1
 
@@ -887,7 +918,7 @@ This app is under active development by 1 dev and its fellow large language mode
            for key, v in vars_.items():
                val = v.get()
                if key in ("auto_clear_input", "replace_output", "sort_output",
-                          "guide_empty_input", "show_tooltips"):
+                          "guide_empty_input", "show_tooltips", "allow_concurrent_jobs"):
                    self.config[key] = bool(val)
                elif key in ("throttle_cpu", "throttle_mem"):
                    self.config[key] = int(str(val).split()[0])
@@ -902,7 +933,7 @@ This app is under active development by 1 dev and its fellow large language mode
            self._rebuild_buttons()
            win.destroy()
 
-       bf = tk.Frame(win)
+       bf = tk.Frame(inner)
        bf.grid(row=r, column=0, columnspan=2, pady=12)
        tk.Button(bf, text="Save", command=save).pack(side='left', padx=5)
        tk.Button(bf, text="Cancel", command=win.destroy).pack(side='left', padx=5)
