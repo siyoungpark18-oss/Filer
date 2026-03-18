@@ -704,7 +704,11 @@ This app is under active development by 1 dev and its fellow large language mode
        self._apply_theme()
        self._update_button_states()
 
-   def _run(self, fn):
+   def _run(self, fn, ignore_lock=False):
+       if getattr(self, '_job_running', False) and not ignore_lock:
+           if not self.config.get("allow_concurrent_jobs", False):
+               print("  A job is already running. Wait for it to finish or cancel it first.")
+               return
        self.cancel_event.clear()
        self._job_running = True
        self.root.after(0, lambda: self._status_lbl.configure(text="● Running..."))
@@ -715,6 +719,7 @@ This app is under active development by 1 dev and its fellow large language mode
            finally:
                self._job_running = False
                self.root.after(0, lambda: self._status_lbl.configure(text=""))
+
        threading.Thread(target=wrapper, daemon=True).start()
 
    def cancel_job(self):
@@ -822,6 +827,7 @@ This app is under active development by 1 dev and its fellow large language mode
        r += 1
 
        fields = [
+           ("allow_concurrent_jobs", "Allow Multiple Jobs to Run at Once", "check", None),
            ("auto_clear_input", "Auto Clear Input After Job", "check", None),
            ("replace_output", "Replace Output Each Run", "check", None),
            ("sort_output", "Sort Output by Operation Type", "check", None),
@@ -956,8 +962,7 @@ This app is under active development by 1 dev and its fellow large language mode
    def run_pdf_splitter(self):    self._run(lambda: pdf_splitter(self.config, self.cancel_event))
    def run_pdf_combiner(self):    self._run(lambda: pdf_combiner(self.config, self.cancel_event))
    def run_pdf_to_images(self):   self._run(lambda: pdf_to_images(self.config, self.cancel_event))
-   def run_status(self):          self._run(lambda: status(self.config))
-
+   def run_status(self):          self._run(lambda: status(self.config), ignore_lock=True)
 
 if __name__ == "__main__":
    root = tk.Tk()
