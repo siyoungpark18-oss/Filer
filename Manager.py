@@ -667,13 +667,15 @@ def find_duplicates(config, cancel=None):
    if len(duplicates) > 10:
        print(f"    ... and {len(duplicates) - 10} more")
 
-   mode = input("Mode? 1=Keep one of each (default)  2=Remove all instances: ").strip()
-   if mode == SENTINEL:
-       return _cancel()
+   mode = config.get("default_dedupe_mode", "ask")
+   if mode == "ask":
+       mode = input("Mode? 1=Keep one of each (default)  2=Remove all instances: ").strip()
+       if mode == SENTINEL:
+           return _cancel()
+   else:
+       print(f"  Mode: {mode}")
 
    if mode == "2":
-       # Remove all instances — find every hash that appeared more than once
-       all_duped_hashes = set()
        hash_counts = {}
        for f in all_files:
            digest = hashlib.md5(f.read_bytes()).hexdigest()
@@ -706,7 +708,7 @@ def find_duplicates(config, cancel=None):
            print(f"  Failed to copy {f.name}: {e}")
            failed += 1
 
-   print(f"  Copied to Output: {copied}   Duplicates excluded: {len(duplicates)}{f'   Failed: {failed}' if failed else ''}")
+   print(f"  Copied to Output: {copied}   Excluded: {len(exclude)}{f'   Failed: {failed}' if failed else ''}")
    do_auto_clear(config)
    print(f"  Done! → {out}")
    print("")
