@@ -258,8 +258,7 @@ def images_to_pdf(config, cancel=None):
    print(f"  Output: {out}")
    print(f"  Note: cannot be cancelled once PDF conversion starts.")
 
-
-   image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'}
+   image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp'}
    image_files = sorted(
        [f for f in src.rglob("*") if f.is_file() and f.suffix.lower() in image_extensions],
        key=lambda x: natural_sort_key(str(x.relative_to(src)))
