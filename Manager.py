@@ -638,24 +638,13 @@ def find_duplicates(config, cancel=None):
    out = get_output(config, "find duplicates", run_name)
    print(f"  Output: {out}")
 
-   custom = input(f"Folder to scan (Enter for Input): ").strip()
-   if custom == SENTINEL:
-       return _cancel()
-   target = Path(custom) if custom else src
-
-   if not target.exists():
-       print("  Folder doesn't exist.")
-       print("")
-       return
-
-   print(f"  Scanning: {target}")
    image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp'}
 
-   all_files = [f for f in target.rglob("*") if f.is_file() and f.suffix.lower() in image_extensions]
+   all_files = [f for f in src.rglob("*") if f.is_file() and f.suffix.lower() in image_extensions]
    print(f"  Hashing {len(all_files)} image(s)...")
 
    hashes = {}
-   duplicates = []
+   duplicates = set()
    for f in all_files:
        if cancel and cancel.is_set():
            print("  Cancelled.")
@@ -663,7 +652,7 @@ def find_duplicates(config, cancel=None):
            return
        digest = hashlib.md5(f.read_bytes()).hexdigest()
        if digest in hashes:
-           duplicates.append((f, hashes[digest]))
+           duplicates.add(f)
        else:
            hashes[digest] = f
 
@@ -673,12 +662,30 @@ def find_duplicates(config, cancel=None):
        return
 
    print(f"  Found {len(duplicates)} duplicate(s) out of {len(all_files)} images:")
-   for dup, original in duplicates[:10]:
-       print(f"    {dup.name}  ==  {original.name}")
+   for dup in sorted(duplicates)[:10]:
+       print(f"    {dup.name}")
    if len(duplicates) > 10:
        print(f"    ... and {len(duplicates) - 10} more")
 
-   confirm = input(f"Delete all {len(duplicates)} duplicates? (y/Enter=yes): ").strip().lower()
+   mode = input("Mode? 1=Keep one of each (default)  2=Remove all instances: ").strip()
+   if mode == SENTINEL:
+       return _cancel()
+
+   if mode == "2":
+       # Remove all instances — find every hash that appeared more than once
+       all_duped_hashes = set()
+       hash_counts = {}
+       for f in all_files:
+           digest = hashlib.md5(f.read_bytes()).hexdigest()
+           hash_counts[digest] = hash_counts.get(digest, 0) + 1
+       all_duped_hashes = {d for d, c in hash_counts.items() if c > 1}
+       exclude = {f for f in all_files if hashlib.md5(f.read_bytes()).hexdigest() in all_duped_hashes}
+       print(f"  Mode: remove all instances — {len(exclude)} image(s) excluded.")
+   else:
+       exclude = duplicates
+       print(f"  Mode: keep one of each — {len(exclude)} duplicate(s) excluded.")
+
+   confirm = input(f"Copy {len(all_files) - len(exclude)} image(s) to Output? (y/Enter=yes): ").strip().lower()
    if confirm == SENTINEL:
        return _cancel()
    if confirm not in ("y", "yes", ""):
@@ -686,20 +693,23 @@ def find_duplicates(config, cancel=None):
        print("")
        return
 
-   deleted = failed = 0
-   for dup, _ in duplicates:
+   copied = failed = 0
+   for f in all_files:
+       if f in exclude:
+           continue
+       dest = out / f.relative_to(src)
+       dest.parent.mkdir(parents=True, exist_ok=True)
        try:
-           dup.unlink()
-           deleted += 1
+           shutil.copy2(str(f), dest)
+           copied += 1
        except Exception as e:
-           print(f"  Failed to delete {dup.name}: {e}")
+           print(f"  Failed to copy {f.name}: {e}")
            failed += 1
 
-   print(f"  Deleted: {deleted}{f'   Failed: {failed}' if failed else ''}")
+   print(f"  Copied to Output: {copied}   Duplicates excluded: {len(duplicates)}{f'   Failed: {failed}' if failed else ''}")
    do_auto_clear(config)
    print(f"  Done! → {out}")
    print("")
-
 
 
 
