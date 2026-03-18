@@ -46,19 +46,49 @@ THEMES = {
 
 
 class LogRedirect(io.TextIOBase):
-   def __init__(self, log_widget):
-       self.log = log_widget
+    MAX_LINES   = 500
+    REPEAT_THRESHOLD = 20
 
-   def write(self, msg):
-       if msg.strip():
-           self.log.configure(state='normal')
-           self.log.insert(tk.END, msg if msg.endswith('\n') else msg + '\n')
-           self.log.see(tk.END)
-           self.log.configure(state='disabled')
-       return len(msg)
+    def __init__(self, log_widget):
+        self.log        = log_widget
+        self._last_msg  = None   # last distinct message text
+        self._rep_count = 0      # how many times it has repeated
 
-   def flush(self):
-       pass
+    def write(self, msg):
+        msg = msg.rstrip('\n')
+        if not msg.strip():
+            return len(msg)
+
+        self.log.configure(state='normal')
+
+        if msg == self._last_msg:
+            self._rep_count += 1
+            if self._rep_count >= self.REPEAT_THRESHOLD:
+                # Update the last line in place
+                self.log.delete("end-2l", "end-1l")
+                self.log.insert(tk.END, f"{msg}  ×{self._rep_count}\n")
+                self.log.see(tk.END)
+                self.log.configure(state='disabled')
+                return len(msg)
+            # else fall through and print normally (first 20)
+        else:
+            self._last_msg  = msg
+            self._rep_count = 1
+
+        self.log.insert(tk.END, msg + '\n')
+
+        # Trim oldest lines if over limit
+        line_count = int(self.log.index('end-1c').split('.')[0])
+        if line_count > self.MAX_LINES:
+            excess = line_count - self.MAX_LINES
+            self.log.delete('1.0', f'{excess + 1}.0')
+
+        self.log.see(tk.END)
+        self.log.configure(state='disabled')
+        return len(msg)
+
+    def flush(self):
+        pass
 
 
 input_queue = queue.Queue()
@@ -175,20 +205,20 @@ class App:
        t = self._theme()
        configured = self._is_configured()
 
-       # ⚠ badge on Add Input and Config
+       # ⚠ badge on Add Input only
        for label, lbl in self._btn_labels.items():
            try:
-               if label in ("Add Input", "Config"):
+               if label == "Add Input":
                    if not configured:
                        current = lbl.cget("text")
                        if not current.startswith("⚠ "):
-                           lbl.configure(text=f"⚠ {label}")
+                           lbl.configure(text="⚠ Add Input")
                    else:
-                       lbl.configure(text=label)
+                       lbl.configure(text="Add Input")
            except tk.TclError:
                pass
 
-       # Existing empty-input dimming (unchanged logic)
+       # Empty-input dimming
        if not self.config.get("guide_empty_input", True):
            for label, lbl in self._btn_labels.items():
                try:
@@ -409,12 +439,6 @@ Cancels the current task. Since most of the tasks are so fast anyway, you likely
 However, processes like PDF to Images can be slow and take forever. You can use this button to cancel the current job. Because this program can take up a lot of RAM, this should prevent the app from using your resources for too long.
 
 
-Config:
-The config allows you to tell the program where you want the input and output files to be. This is useful if you manually want to check what's in them or manually move files into input and out of output. 
-
-This is primarily useful since there's no streamlined way to find the output and move it to its desired location. But at the very least you can configure where the output is and place it in a place you can easily find.
-
-
 
 Example of Workflow
 
@@ -492,8 +516,9 @@ This app is under active development by 1 dev and its fellow large language mode
 
        tk.Button(win, text="Close", command=win.destroy).pack(pady=8)
 
-
    def _build_ui(self):
+       self._log_font_size = 11
+
        left = tk.Frame(self.root, width=200)
        left.pack(side='left', fill='y', padx=10, pady=10)
        left.pack_propagate(False)
@@ -501,6 +526,7 @@ This app is under active development by 1 dev and its fellow large language mode
        title_row = tk.Frame(left)
        title_row.pack(fill='x', pady=(0, 2))
        tk.Label(title_row, text="Filer", font=('', 11, 'bold')).pack(side='left')
+
        def _mini_btn(parent, text_or_var, cmd, side='right', tooltip=None):
            t = self._theme()
            f = tk.Frame(parent, bg=t["fg"], padx=1, pady=1)
@@ -524,10 +550,12 @@ This app is under active development by 1 dev and its fellow large language mode
            if tooltip:
                def show_tip(e):
                    self._show_tooltip_popup(lbl, tooltip)
+
                def hide_tip(e):
                    if hasattr(self, '_tooltip') and self._tooltip:
                        self._tooltip.destroy()
                        self._tooltip = None
+
                lbl.bind("<Enter>", lambda e: (lbl.configure(bg=self._theme()["hover"]), show_tip(e)))
                lbl.bind("<Leave>", lambda e: (lbl.configure(bg=self._theme()["bg"]), hide_tip(e)))
 
@@ -539,7 +567,7 @@ This app is under active development by 1 dev and its fellow large language mode
        _mini_btn(title_row, "≡", self._show_preferences, tooltip="Preferences")
        self._dark_btn = _mini_btn(title_row, "🌙" if not self._dark else "☀", self._toggle_dark,
                                   tooltip="Dark Mode" if not self._dark else "Bright Mode")
-       # Live input status label
+
        status_row = tk.Frame(left)
        status_row.pack(fill='x', pady=(0, 4))
        t = self._theme()
@@ -554,19 +582,36 @@ This app is under active development by 1 dev and its fellow large language mode
 
        self._right = tk.Frame(self.root)
        self._right.pack(side='left', fill='both', expand=True, padx=(0, 10), pady=10)
+
+       # ── Log header ───────────────────────────────────────────────────────
        log_header = tk.Frame(self._right)
        log_header.pack(fill='x')
+
        tk.Label(log_header, text="Log", font=('', 11, 'bold')).pack(side='left')
        self._status_lbl = tk.Label(log_header, text="", font=('Courier', 9))
        self._status_lbl.pack(side='left', padx=(8, 0))
 
+       def _change_font(delta):
+           self._log_font_size = max(7, min(24, self._log_font_size + delta))
+           self.log.configure(font=('Courier', self._log_font_size))
+
+       for symbol, delta in (('+', 1), ('-', -1)):
+           btn = tk.Label(log_header, text=symbol, font=('', 10, 'bold'),
+                          bg=t["btn_bg"], fg=t["fg"], padx=6, cursor="hand2")
+           btn.pack(side='right', padx=(2, 0))
+           btn.bind("<Button-1>", lambda e, d=delta: _change_font(d))
+           btn.bind("<Enter>", lambda e, b=btn: b.configure(bg=self._theme()["hover"]))
+           btn.bind("<Leave>", lambda e, b=btn: b.configure(bg=self._theme()["btn_bg"]))
+
+       # ── Log area ─────────────────────────────────────────────────────────
        log_frame = tk.Frame(self._right)
        log_frame.pack(fill='both', expand=True)
 
        self._scrollbar = tk.Scrollbar(log_frame)
        self._scrollbar.pack(side='right', fill='y')
 
-       self.log = tk.Text(log_frame, state='disabled', wrap='word', font=('Courier', 11),
+       self.log = tk.Text(log_frame, state='disabled', wrap='word',
+                          font=('Courier', self._log_font_size),
                           yscrollcommand=self._on_scroll,
                           relief='flat', bd=0, highlightthickness=0)
        self.log.pack(side='left', fill='both', expand=True)
@@ -605,8 +650,6 @@ This app is under active development by 1 dev and its fellow large language mode
        "Clear Log": "Clears the log display.",
        "Clear Output": "Deletes everything in the Output folder.",
        "Cancel Job": "Cancels the currently running job.",
-       "Config": "Set the Input and Output folder paths.",
-       "Options": "Configure behaviour, defaults, throttles, and visible buttons.",
    }
 
    def _show_tooltip(self, widget, text):
