@@ -205,6 +205,7 @@ class App:
        t = self._theme()
        configured = self._is_configured()
 
+
        # ⚠ badge on Add Input only
        for label, lbl in self._btn_labels.items():
            try:
@@ -650,7 +651,25 @@ This app is under active development by 1 dev and its fellow large language mode
        "Clear Log": "Clears the log display.",
        "Clear Output": "Deletes everything in the Output folder.",
        "Cancel Job": "Cancels the currently running job.",
+       "Open Output": "Opens the output folder in Finder/Explorer and prints the path to the log.",
    }
+
+   def open_output(self):
+       out_dir = Path(self.config.get("output", "")) / "output"
+       if not self.config.get("output", ""):
+           print("  Output folder is not configured. Set it in Preferences (≡).")
+           return
+       if not out_dir.exists():
+           print(f"  Output folder does not exist yet: {out_dir}")
+           return
+       print(f"  Output: {out_dir}")
+       import subprocess, sys as _sys
+       if _sys.platform == "darwin":
+           subprocess.Popen(["open", str(out_dir)])
+       elif _sys.platform == "win32":
+           subprocess.Popen(["explorer", str(out_dir)])
+       else:
+           subprocess.Popen(["xdg-open", str(out_dir)])
 
    def _show_tooltip(self, widget, text):
        def on_enter(e):
@@ -719,16 +738,16 @@ This app is under active development by 1 dev and its fellow large language mode
 
        fixed_sections = [
            ("Input", [
-               ("Add Input",    self.pick_files),
-               ("Clear Input",  self.clear_input),
+               ("Add Input", self.pick_files),
+               ("Clear Input", self.clear_input),
            ]),
            ("Utility", [
-               ("Status",       self.run_status),
-               ("Clear Log",    self.clear_log),
+               ("Status", self.run_status),
+               ("Clear Log", self.clear_log),
+               ("Open Output", self.open_output),
                ("Clear Output", self.clear_output),
-               ("Cancel Job",   self.cancel_job),
+               ("Cancel Job", self.cancel_job),
            ]),
-
        ]
 
        from collections import OrderedDict
@@ -982,6 +1001,10 @@ This app is under active development by 1 dev and its fellow large language mode
        tk.Button(bf, text="Cancel", command=win.destroy).pack(side='left', padx=5)
 
    def pick_files(self):
+       if not self.config.get("input", ""):
+           print("  Input folder is not configured. Set it in Preferences (≡).")
+           return
+
        input_dir = get_input(self.config)
        input_dir.mkdir(parents=True, exist_ok=True)
        dialog_result = queue.Queue()
