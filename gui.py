@@ -830,6 +830,7 @@ This app is under active development by 1 dev and its fellow large language mode
            ("default_sort", "Default Sort Mode", "combo", ["ask", "natural", "none"]),
            ("default_dpi", "Default DPI (PDF to Images)", "combo", ["ask", "72", "96", "150", "200", "300", "600"]),
            ("default_img_fmt", "Default Image Format", "combo", ["ask", "jpg", "png", "webp", "bmp", "tiff"]),
+           ("default_dedupe_mode", "Find Duplicates: Default Mode", "combo", ["ask", "1", "2"]),
            ("hotkey_continue", "Continue Hotkey", "combo", ["Return", "space", "Right"]),
            ("hotkey_cancel", "Cancel Hotkey", "combo", ["Escape", "space", "Left"]),
            ("throttle_cpu", "Throttle: Max CPU % (0 = off)", "combo", ["0", "50", "60", "70", "80", "90"]),
