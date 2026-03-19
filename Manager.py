@@ -237,7 +237,6 @@ def _print_summary(copied=0, failed=None, skipped=None, label="processed"):
         if type_skips:
             print(f"  {type_skips} file(s) skipped (unsupported type)")
 
-
 def folders_to_pdf(config, cancel=None):
     src = get_input(config)
     src.mkdir(parents=True, exist_ok=True)
@@ -251,6 +250,15 @@ def folders_to_pdf(config, cancel=None):
     print(f"  Output: {out}")
     if not _check_disk_space(out, config):
         return
+
+    # ── Resolve mode ─────────────────────────────────────────────────────────
+    mode = config.get("default_folders_to_pdf_mode", "ask")
+    if mode == "ask":
+        raw = input("Mode? 1=Combine all into one PDF (default)  2=One PDF per folder: ").strip()
+        if raw == SENTINEL:
+            return _cancel()
+        mode = "individual" if raw == "2" else "combine"
+    print(f"  Mode: {mode}")
     print(f"  Note: cannot be cancelled once PDF conversion starts.")
 
     image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp'}
@@ -263,38 +271,108 @@ def folders_to_pdf(config, cancel=None):
         return
 
     print(f"  Found {len(folders)} folder(s). Scanning...")
-    all_paths = []
-    all_skipped = []
-    for folder in folders:
-        if cancel and cancel.is_set():
-            print("  Cancelled.")
-            print("")
-            return
-        throttle_if_needed(config)
-        paths, skipped = collect_image_paths(folder, image_extensions)
-        all_paths.extend(paths)
-        all_skipped.extend(skipped)
-        print(f"  [{folder.name}]  {len(paths)} image(s){f'  {len(skipped)} skipped' if skipped else ''}")
 
-    print(f"  Total: {len(all_paths)} images across {len(folders)} folders")
-
-    if all_paths:
-        try:
-            save_pdf(all_paths, out / "output.pdf")
-        except OSError as e:
-            if _is_no_space(e):
-                print(f"  ✖ Job stopped — disk full. PDF may be incomplete.")
+    if mode == "combine":
+        # ── Original behaviour: one big PDF ──────────────────────────────────
+        all_paths = []
+        all_skipped = []
+        for folder in folders:
+            if cancel and cancel.is_set():
+                print("  Cancelled.")
                 print("")
                 return
-            raise
-        _print_summary(copied=len(all_paths), skipped=all_skipped if all_skipped else None, label="converted")
+            throttle_if_needed(config)
+            paths, skipped = collect_image_paths(folder, image_extensions)
+            all_paths.extend(paths)
+            all_skipped.extend(skipped)
+            print(f"  [{folder.name}]  {len(paths)} image(s){f'  {len(skipped)} skipped' if skipped else ''}")
+
+        print(f"  Total: {len(all_paths)} images across {len(folders)} folders")
+
+        if all_paths:
+            try:
+                save_pdf(all_paths, out / "output.pdf")
+            except OSError as e:
+                if _is_no_space(e):
+                    print(f"  ✖ Job stopped — disk full. PDF may be incomplete.")
+                    print("")
+                    return
+                raise
+            _print_summary(copied=len(all_paths), skipped=all_skipped if all_skipped else None, label="converted")
+            do_auto_clear(config)
+            print(f"  Done! → {out}")
+            print("")
+        else:
+            print("  No images found in any folder.")
+            if all_skipped:
+                _print_summary(skipped=all_skipped)
+            print("")
+
+    else:
+        # ── Individual mode: one PDF per chapter folder ───────────────────────
+        # Determine units: if top-level folders contain subfolders, use those.
+        # If top-level folders contain images directly, use top-level folders.
+        def get_units(top_folders):
+            units = []
+            for folder in top_folders:
+                subfolders = sorted(
+                    [f for f in folder.iterdir() if f.is_dir()],
+                    key=lambda x: natural_sort_key(x.name)
+                )
+                if subfolders:
+                    # Has subfolders — treat each subfolder as a unit
+                    units.extend(subfolders)
+                else:
+                    # No subfolders — folder itself is the unit
+                    units.append(folder)
+            return units
+
+        def collect_direct_images(folder):
+            # Only collect images directly in this folder, no recursion
+            paths = []
+            skipped = []
+            for item in sorted(folder.iterdir(), key=lambda x: natural_sort_key(x.name)):
+                if item.is_file():
+                    if item.suffix.lower() in image_extensions:
+                        paths.append(item)
+                    else:
+                        skipped.append((item, "unsupported type"))
+            return paths, skipped
+
+        units = get_units(folders)
+        print(f"  {len(units)} unit(s) to convert individually.")
+
+        total_converted = 0
+        total_skipped = []
+        for unit in units:
+            if cancel and cancel.is_set():
+                print(f"  Cancelled. ({total_converted} PDFs saved so far)")
+                print("")
+                return
+            throttle_if_needed(config)
+            paths, skipped = collect_image_paths(unit, image_extensions)
+            total_skipped.extend(skipped)
+            print(f"  [{unit.name}]  {len(paths)} image(s){f'  {len(skipped)} skipped' if skipped else ''}")
+
+            if not paths:
+                print(f"    No images found, skipping.")
+                continue
+
+            safe_name = re.sub(r'[^\w\s\-.]', '', unit.name).strip() or unit.name
+            pdf_path = out / f"{safe_name}.pdf"
+            try:
+                save_pdf(paths, pdf_path)
+                total_converted += 1
+            except OSError as e:
+                if _is_no_space(e):
+                    print(f"  ✖ Disk full after {total_converted} PDF(s). Stopping.")
+                    print("")
+                    return
+                print(f"  Failed to save {safe_name}.pdf: {e}")
+
+        _print_summary(copied=total_converted, skipped=total_skipped if total_skipped else None, label="PDFs saved")
         do_auto_clear(config)
         print(f"  Done! → {out}")
-        print("")
-    else:
-        print("  No images found in any folder.")
-        if all_skipped:
-            _print_summary(skipped=all_skipped)
         print("")
 
 
