@@ -599,11 +599,11 @@ This app is under active development by 1 dev and its fellow large language mode
 
        for symbol, delta in (('+', 1), ('-', -1)):
            btn = tk.Label(log_header, text=symbol, font=('', 10, 'bold'),
-                          bg=t["btn_bg"], fg=t["fg"], padx=6, cursor="hand2")
+                          bg=t["bg"], fg=t["fg"], padx=6, cursor="hand2")
            btn.pack(side='right', padx=(2, 0))
            btn.bind("<Button-1>", lambda e, d=delta: _change_font(d))
            btn.bind("<Enter>", lambda e, b=btn: b.configure(bg=self._theme()["hover"]))
-           btn.bind("<Leave>", lambda e, b=btn: b.configure(bg=self._theme()["btn_bg"]))
+           btn.bind("<Leave>", lambda e, b=btn: b.configure(bg=self._theme()["bg"]))
 
        # ── Log area ─────────────────────────────────────────────────────────
        log_frame = tk.Frame(self._right)
