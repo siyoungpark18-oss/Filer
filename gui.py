@@ -120,6 +120,7 @@ class App:
        self.root.resizable(True, True)
        self.config = load_config()
        self.cancel_event = threading.Event()
+       self._running_jobs = {}  # {job_name: count}
        self._dark = self.config.get("dark_mode", False)
        # Track button label widgets: {text: lbl_widget}
        self._btn_labels = {}
@@ -766,30 +767,48 @@ This app is under active development by 1 dev and its fellow large language mode
        self._apply_theme()
        self._update_button_states()
 
-   def _run(self, fn, ignore_lock=False):
-       if getattr(self, '_job_running', False) and not ignore_lock:
+   def _run(self, fn, ignore_lock=False, job_name="Job"):
+       if self._running_jobs and not ignore_lock:
            if not self.config.get("allow_concurrent_jobs", False):
                print("  A job is already running. Wait for it to finish or cancel it first.")
                return
        self.cancel_event.clear()
-       self._job_running = True
-       self.root.after(0, lambda: self._status_lbl.configure(text="● Running..."))
+
+       # Register job
+       self._running_jobs[job_name] = self._running_jobs.get(job_name, 0) + 1
+       self._update_status_label()
 
        def wrapper():
            try:
                fn()
            finally:
-               self._job_running = False
-               self.root.after(0, lambda: self._status_lbl.configure(text=""))
+               # Deregister job
+               count = self._running_jobs.get(job_name, 1) - 1
+               if count <= 0:
+                   self._running_jobs.pop(job_name, None)
+               else:
+                   self._running_jobs[job_name] = count
+               self.root.after(0, self._update_status_label)
 
        threading.Thread(target=wrapper, daemon=True).start()
 
+
+
    def cancel_job(self):
-       if not getattr(self, '_job_running', False):
+       if not self._running_jobs:
            print("  No job is running.")
            return
        self.cancel_event.set()
        print("  Cancelling...")
+
+   def _update_status_label(self):
+       if not self._running_jobs:
+           self._status_lbl.configure(text="")
+       else:
+           names = []
+           for name, count in self._running_jobs.items():
+               names.append(f"{name}" if count == 1 else f"{name} ×{count}")
+           self._status_lbl.configure(text="● " + "  |  ".join(names))
 
    def clear_log(self):
        self.log.configure(state='normal')
@@ -1052,17 +1071,38 @@ This app is under active development by 1 dev and its fellow large language mode
 
        self._run(run)
 
-   def run_folders_to_pdf(self):  self._run(lambda: folders_to_pdf(self.config, self.cancel_event))
-   def run_images_to_pdf(self):   self._run(lambda: images_to_pdf(self.config, self.cancel_event))
-   def run_folder_renamer(self):  self._run(lambda: folder_renamer(self.config, self.cancel_event))
-   def run_file_renamer(self):    self._run(lambda: file_renamer(self.config, self.cancel_event))
-   def run_combine(self):         self._run(lambda: combine_image_sets(self.config, self.cancel_event))
-   def run_converter(self):       self._run(lambda: image_converter(self.config, self.cancel_event))
-   def run_duplicates(self):      self._run(lambda: find_duplicates(self.config, self.cancel_event))
-   def run_pdf_splitter(self):    self._run(lambda: pdf_splitter(self.config, self.cancel_event))
-   def run_pdf_combiner(self):    self._run(lambda: pdf_combiner(self.config, self.cancel_event))
-   def run_pdf_to_images(self):   self._run(lambda: pdf_to_images(self.config, self.cancel_event))
-   def run_status(self):          self._run(lambda: status(self.config), ignore_lock=True)
+   def run_folders_to_pdf(self):
+       self._run(lambda: folders_to_pdf(self.config, self.cancel_event), job_name="Folders to PDF")
+
+   def run_images_to_pdf(self):
+       self._run(lambda: images_to_pdf(self.config, self.cancel_event), job_name="Images to PDF")
+
+   def run_folder_renamer(self):
+       self._run(lambda: folder_renamer(self.config, self.cancel_event), job_name="Folder Renamer")
+
+   def run_file_renamer(self):
+       self._run(lambda: file_renamer(self.config, self.cancel_event), job_name="File Renamer")
+
+   def run_combine(self):
+       self._run(lambda: combine_image_sets(self.config, self.cancel_event), job_name="Combine Image Sets")
+
+   def run_converter(self):
+       self._run(lambda: image_converter(self.config, self.cancel_event), job_name="Image Converter")
+
+   def run_duplicates(self):
+       self._run(lambda: find_duplicates(self.config, self.cancel_event), job_name="Find Duplicates")
+
+   def run_pdf_splitter(self):
+       self._run(lambda: pdf_splitter(self.config, self.cancel_event), job_name="PDF Splitter")
+
+   def run_pdf_combiner(self):
+       self._run(lambda: pdf_combiner(self.config, self.cancel_event), job_name="PDF Combiner")
+
+   def run_pdf_to_images(self):
+       self._run(lambda: pdf_to_images(self.config, self.cancel_event), job_name="PDF to Images")
+
+   def run_status(self):
+       self._run(lambda: status(self.config), ignore_lock=True, job_name="Status")
 
 if __name__ == "__main__":
    root = tk.Tk()
