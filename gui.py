@@ -925,6 +925,7 @@ This app is under active development by 1 dev and its fellow large language mode
            ("sort_output", "Sort Output by Operation Type", "check", None),
            ("guide_empty_input", "Dim Tools when Input Empty", "check", None),
            ("show_tooltips", "Show Tooltip Hints", "check", None),
+           ("min_free_gb", "Min Free Space to Start Job (GB)", "combo", ["0", "1", "2", "3", "5", "10"]),
            ("default_sort", "Default Sort Mode", "combo", ["ask", "natural", "none"]),
            ("default_dpi", "Default DPI (PDF to Images)", "combo", ["ask", "72", "96", "150", "200", "300", "600"]),
            ("default_img_fmt", "Default Image Format", "combo", ["ask", "jpg", "png", "webp", "bmp", "tiff"]),
@@ -986,6 +987,8 @@ This app is under active development by 1 dev and its fellow large language mode
                    self.config[key] = int(str(val).split()[0])
                elif key == "default_dpi":
                    self.config[key] = val if val == "ask" else int(val)
+               elif key == "min_free_gb":
+                   self.config[key] = int(str(val).split()[0])
                else:
                    self.config[key] = val
            for key, v in btn_vars.items():
