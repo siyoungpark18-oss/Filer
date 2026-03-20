@@ -679,8 +679,26 @@ Example of Workflow
         "Clear Log": "Clears the log display.",
         "Clear Output": "Deletes everything in the Output folder.",
         "Cancel Job": "Cancels the currently running job.",
+        "Open Input": "Opens the input folder in Finder/Explorer.",
         "Open Output": "Opens the output folder in Finder/Explorer and prints the path to the log.",
     }
+
+    def open_input(self):
+        input_dir = get_input(self.config)
+        if not self.config.get("input", ""):
+            print("  Input folder is not configured. Set it in Preferences (≡).")
+            return
+        if not input_dir.exists():
+            print(f"  Input folder does not exist yet: {input_dir}")
+            return
+        print(f"  Input: {input_dir}")
+        import subprocess, sys as _sys
+        if _sys.platform == "darwin":
+            subprocess.Popen(["open", str(input_dir)])
+        elif _sys.platform == "win32":
+            subprocess.Popen(["explorer", str(input_dir)])
+        else:
+            subprocess.Popen(["xdg-open", str(input_dir)])
 
     def open_output(self):
         out_dir = Path(self.config.get("output", "")) / "output"
@@ -767,6 +785,7 @@ Example of Workflow
             ("Input", [
                 ("Add Input", self.pick_files),
                 ("Clear Input", self.clear_input),
+                ("Open Input", self.open_input),
             ]),
             ("Utility", [
                 ("Status", self.run_status),
