@@ -7,7 +7,7 @@ import sys
 import io
 import shutil
 import webbrowser
-print("1") #test
+
 
 from Manager import (
    load_config, save_config, get_input,
