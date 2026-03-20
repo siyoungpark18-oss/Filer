@@ -572,7 +572,7 @@ def file_renamer(config, cancel=None):
         pad   = int(pad)   if pad   else 3
         def _seq_name(base, i, ext):
             num = str(start + i).zfill(pad)
-            return f"{base}_{num}{ext}" if base else f"{num}{ext}"
+            return f"{base}{num}{ext}" if base else f"{num}{ext}"
         preview = [(f, out / f.relative_to(src).parent / _seq_name(param1, i, f.suffix))
                    for i, f in enumerate(items)]
     else:
