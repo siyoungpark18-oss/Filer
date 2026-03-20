@@ -392,7 +392,7 @@ def images_to_pdf(config, cancel=None):
         return
     print(f"  Note: cannot be cancelled once PDF conversion starts.")
 
-    image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp'}
+    image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'}
     all_files = list(src.rglob("*"))
     image_files = []
     skipped = []
