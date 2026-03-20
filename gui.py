@@ -47,12 +47,60 @@ THEMES = {
 
 class LogRedirect(io.TextIOBase):
     MAX_LINES = 500
-    REPEAT_THRESHOLD = 20
+    REPEAT_THRESHOLD = 1
 
-    def __init__(self, log_widget):
+    def __init__(self, log_widget, app):
         self.log = log_widget
+        self.app = app
         self._last_msg = None
         self._rep_count = 0
+        self._active_section = None
+
+    def start_section(self, header):
+        tag = f"section_{id(header)}_{self.log.index(tk.END)}"
+        hide_tag = f"hide_{tag}"
+        expanded = self.app.config.get("log_default_expanded", False)
+
+        self.log.configure(state='normal')
+        arrow = "▲" if expanded else "▼"
+        line = f"{arrow} {header}\n"
+
+        self.log.tag_configure(tag, foreground=self.app._theme()["fg"])
+        self.log.insert(tk.END, line, (tag,))
+        self.log.tag_configure(hide_tag, elide=not expanded)
+
+        self.log.tag_bind(tag, "<Button-1>", lambda e, t=tag, h=hide_tag: self._toggle(t, h))
+        self.log.tag_bind(tag, "<Enter>", lambda e: self.log.configure(cursor="hand2"))
+        self.log.tag_bind(tag, "<Leave>", lambda e: self.log.configure(cursor=""))
+
+        self.log.see(tk.END)
+        self.log.configure(state='disabled')
+
+        self._active_section = {"tag": tag, "hide_tag": hide_tag, "expanded": expanded}
+        return tag
+
+    def end_section(self):
+        self._active_section = None
+
+    def _toggle(self, tag, hide_tag):
+        self.log.configure(state='normal')
+        currently_elided = self.log.tag_cget(hide_tag, "elide")
+        is_hidden = str(currently_elided) in ("1", "True", "true")
+        new_elide = not is_hidden
+        self.log.tag_configure(hide_tag, elide=new_elide)
+
+        ranges = self.log.tag_ranges(tag)
+        if ranges:
+            start, end = ranges[0], ranges[1]
+            text = self.log.get(start, end)
+            if text.startswith("▼"):
+                self.log.delete(start, f"{start}+1c")
+                self.log.insert(start, "▲", (tag,))
+            elif text.startswith("▲"):
+                self.log.delete(start, f"{start}+1c")
+                self.log.insert(start, "▼", (tag,))
+
+        self.log.configure(state='disabled')
 
     def write(self, msg):
         msg = msg.rstrip('\n')
@@ -65,7 +113,8 @@ class LogRedirect(io.TextIOBase):
             self._rep_count += 1
             if self._rep_count >= self.REPEAT_THRESHOLD:
                 self.log.delete("end-2l", "end-1l")
-                self.log.insert(tk.END, f"{msg}  ×{self._rep_count}\n")
+                insert_tags = (self._active_section["hide_tag"],) if self._active_section else ()
+                self.log.insert(tk.END, f"{msg}  ×{self._rep_count}\n", insert_tags)
                 self.log.see(tk.END)
                 self.log.configure(state='disabled')
                 return len(msg)
@@ -73,7 +122,8 @@ class LogRedirect(io.TextIOBase):
             self._last_msg = msg
             self._rep_count = 1
 
-        self.log.insert(tk.END, msg + '\n')
+        insert_tags = (self._active_section["hide_tag"],) if self._active_section else ()
+        self.log.insert(tk.END, msg + '\n', insert_tags)
 
         line_count = int(self.log.index('end-1c').split('.')[0])
         if line_count > self.MAX_LINES:
@@ -123,8 +173,8 @@ class App:
         patch_input()
         self._build_ui()
         self._apply_theme()
-        sys.stdout = LogRedirect(self.log)
-        sys.stderr = LogRedirect(self.log)
+        sys.stdout = LogRedirect(self.log, self)
+        sys.stderr = LogRedirect(self.log, self)
         self._poll_input()
 
     def _theme(self):
@@ -809,7 +859,6 @@ Example of Workflow
                     lbl.configure(bg=t["btn_bg"], font=('', 10), fg=t["fg"])
             win.update_idletasks()
 
-        # ── Sidebar header ────────────────────────────────────────────────────
         tk.Label(sidebar, text="Preferences", font=('', 8),
                  bg=t["btn_bg"], fg=t["hint_fg"], pady=8).pack(fill='x')
 
@@ -825,10 +874,8 @@ Example of Workflow
                 bg=t["bg"] if active_tab["name"] == n else t["btn_bg"]))
             tab_lbls[name] = lbl
 
-        # ── Spacer pushes save/cancel to bottom ───────────────────────────────
         tk.Frame(sidebar, bg=t["btn_bg"]).pack(fill='both', expand=True)
 
-        # ── Shared state ──────────────────────────────────────────────────────
         paths = {
             "input": tk.StringVar(value=self.config.get("input", "")),
             "output": tk.StringVar(value=self.config.get("output", "")),
@@ -896,13 +943,14 @@ Example of Workflow
             row=0, column=0, columnspan=2, sticky='w', pady=(0, 8))
 
         general_fields = [
-            ("allow_concurrent_jobs", "Allow Multiple Jobs at Once", "check", None),
-            ("auto_clear_input",      "Auto Clear Input After Job",  "check", None),
-            ("replace_output",        "Replace Output Each Run",     "check", None),
-            ("sort_output",           "Sort Output by Operation",    "check", None),
-            ("guide_empty_input",     "Dim Tools when Input Empty",  "check", None),
-            ("show_tooltips",         "Show Tooltip Hints",          "check", None),
-            ("min_free_gb",           "Min Free Space to Start (GB)","combo", ["0","1","2","3","5","10"]),
+            ("allow_concurrent_jobs",  "Allow Multiple Jobs at Once",        "check", None),
+            ("auto_clear_input",       "Auto Clear Input After Job",         "check", None),
+            ("replace_output",         "Replace Output Each Run",            "check", None),
+            ("sort_output",            "Sort Output by Operation",           "check", None),
+            ("guide_empty_input",      "Dim Tools when Input Empty",         "check", None),
+            ("show_tooltips",          "Show Tooltip Hints",                 "check", None),
+            ("log_default_expanded",   "Log Sections Expanded by Default",   "check", None),
+            ("min_free_gb",            "Min Free Space to Start (GB)",       "combo", ["0","1","2","3","5","10"]),
         ]
 
         tools_fields = [
@@ -971,7 +1019,6 @@ Example of Workflow
             tk.Checkbutton(p, variable=v, bg=t["bg"]).grid(row=i + 1, column=1, sticky='w')
             btn_vars[key] = v
 
-        # ── Save / Cancel in sidebar bottom ───────────────────────────────────
         def save():
             for key in ("input", "output"):
                 val = paths[key].get().strip()
@@ -983,7 +1030,8 @@ Example of Workflow
             for key, v in vars_.items():
                 val = v.get()
                 if key in ("auto_clear_input", "replace_output", "sort_output",
-                           "guide_empty_input", "show_tooltips", "allow_concurrent_jobs"):
+                           "guide_empty_input", "show_tooltips", "allow_concurrent_jobs",
+                           "log_default_expanded"):
                     self.config[key] = bool(val)
                 elif key in ("throttle_cpu", "throttle_mem"):
                     self.config[key] = int(str(val).split()[0])
@@ -1009,9 +1057,7 @@ Example of Workflow
             lbl.bind("<Enter>", lambda e, l=lbl: l.configure(bg=t["hover"]))
             lbl.bind("<Leave>", lambda e, l=lbl: l.configure(bg=t["btn_bg"]))
 
-        win.update_idletasks()
         show_tab("Paths")
-
 
     def pick_files(self):
         if not self.config.get("input", ""):
