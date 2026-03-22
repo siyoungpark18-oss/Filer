@@ -8,7 +8,7 @@ import sys
 import io
 import shutil
 import webbrowser
-test
+
 #IMPORT FROM MANAGER——————————————————————————————————————————————————————————————————————————————————————
 from Manager import (
    load_config, save_config, get_input,
