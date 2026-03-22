@@ -15,6 +15,8 @@ from pypdf import PdfReader, PdfWriter
 #PATHS————————————————————————————————————————————————————————————————————————————————————————————————————
 CONFIG_PATH = Path.home() / ".file_folder_manager" / "config.json"
 
+IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'}
+
 SENTINEL = "\x00CANCELLED\x00"
 
 #DEFAULTS——————————————————————————————————————————————————————————————————————————————————————————————————
@@ -274,7 +276,7 @@ def folders_to_pdf(config, cancel=None):
     print(f"  Mode: {mode}")
     print(f"  Note: cannot be cancelled once PDF conversion starts.")
 
-    image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'}
+    image_extensions = IMAGE_EXTENSIONS
     folders = sorted([f for f in src.iterdir() if f.is_dir()],
                      key=lambda x: natural_sort_key(x.name))
 
@@ -396,7 +398,7 @@ def images_to_pdf(config, cancel=None):
         return
     print(f"  Note: cannot be cancelled once PDF conversion starts.")
 
-    image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'}
+    image_extensions = IMAGE_EXTENSIONS
     all_files = list(src.rglob("*"))
     image_files = []
     skipped = []
@@ -686,7 +688,7 @@ def combine_image_sets(config, cancel=None):
     if not _check_disk_space(out, config):
         return
 
-    image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp'}
+    image_extensions = IMAGE_EXTENSIONS
     sort_result = resolve_sort(config)
     if sort_result is None:
         return _cancel()
@@ -788,7 +790,7 @@ def image_converter(config, cancel=None):
     if not _check_disk_space(out, config):
         return
 
-    image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp'}
+    image_extensions = IMAGE_EXTENSIONS
     all_files = list(src.rglob("*"))
     images = []
     skipped = []
@@ -881,7 +883,7 @@ def find_duplicates(config, cancel=None):
     if not _check_disk_space(out, config):
         return
 
-    image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp'}
+    image_extensions = IMAGE_EXTENSIONS
     all_files_raw = list(src.rglob("*"))
     all_files = []
     skipped = []
