@@ -1,3 +1,4 @@
+#IMPORTS——————————————————————————————————————————————————————————————————————————————————————————————————
 import tkinter as tk #test
 from tkinter import ttk, scrolledtext, messagebox, filedialog
 from pathlib import Path
@@ -7,8 +8,8 @@ import sys
 import io
 import shutil
 import webbrowser
-
-
+test
+#IMPORT FROM MANAGER——————————————————————————————————————————————————————————————————————————————————————
 from Manager import (
    load_config, save_config, get_input,
    folders_to_pdf, images_to_pdf, folder_renamer, file_renamer,
@@ -16,7 +17,7 @@ from Manager import (
    pdf_to_images, status, find_duplicates, DEFAULTS, SENTINEL
 )
 
-
+#VISUAL THEMES—————————————————————————————————————————————————————————————————————————————————————————————
 THEMES = {
     "light": {
         "bg":        "#f0f0f0",
@@ -52,7 +53,7 @@ THEMES = {
     },
 }
 
-
+#LOG——————————————————————————————————————————————————————————————————————————————————————————————————
 class LogRedirect(io.TextIOBase):
     MAX_LINES = 500
     REPEAT_THRESHOLD = 1
@@ -199,6 +200,7 @@ TOOL_LABELS = {
 }
 
 
+#APP——————————————————————————————————————————————————————————————————————————————————————————————————
 class App:
     def __init__(self, root):
         self.root = root
