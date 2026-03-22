@@ -46,7 +46,6 @@ def load_config():
             data.setdefault(k, v)
         return data
     return DEFAULTS.copy()
-print("test")
 
 def save_config(config):
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
