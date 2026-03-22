@@ -1,3 +1,4 @@
+#IMPORTS——————————————————————————————————————————————————————————————————————————————————————————————————
 from PIL import Image
 from pathlib import Path
 import re
@@ -11,11 +12,12 @@ import errno
 import os
 from pypdf import PdfReader, PdfWriter
 
-
+#PATHS————————————————————————————————————————————————————————————————————————————————————————————————————
 CONFIG_PATH = Path.home() / ".file_folder_manager" / "config.json"
 
 SENTINEL = "\x00CANCELLED\x00"
 
+#DEFAULTS——————————————————————————————————————————————————————————————————————————————————————————————————
 DEFAULTS = {
     "input":                    "./resources",
     "output":                   "./resources",
@@ -34,7 +36,7 @@ DEFAULTS = {
     "log_default_expanded":     False,
 }
 
-
+#FUNCTIONS——————————————————————————————————————————————————————————————————————————————————————————————————
 def load_config():
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     if CONFIG_PATH.exists():
@@ -44,7 +46,7 @@ def load_config():
             data.setdefault(k, v)
         return data
     return DEFAULTS.copy()
-
+print("test")
 
 def save_config(config):
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
