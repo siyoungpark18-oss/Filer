@@ -790,7 +790,7 @@ def image_converter(config, cancel=None):
     if not _check_disk_space(out, config):
         return
 
-    image_extensions = IMAGE_EXTENSIONS
+    image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp'}
     all_files = list(src.rglob("*"))
     images = []
     skipped = []
