@@ -543,20 +543,22 @@ def file_renamer(config, cancel=None):
         mode = input("Choose mode (1-4): ").strip()
         if mode == SENTINEL:
             return _cancel()
+        mode = {"1": "prefix", "2": "suffix", "3": "replace", "4": "sequence"}.get(mode, mode)
     else:
         print(f"  Mode: {mode}")
 
-    if mode == "1":
+    if mode == "prefix":
         param1 = input("Prefix to add: ")
+
         if param1 == SENTINEL:
             return _cancel()
         preview = [(f, out / f.relative_to(src).parent / (param1 + f.name)) for f in items]
-    elif mode == "2":
+    elif mode == "suffix":
         param1 = input("Suffix to add (before extension): ")
         if param1 == SENTINEL:
             return _cancel()
         preview = [(f, out / f.relative_to(src).parent / (f.stem + param1 + f.suffix)) for f in items]
-    elif mode == "3":
+    elif mode == "replace":
         param1 = input("Find: ")
         if param1 == SENTINEL:
             return _cancel()
@@ -564,7 +566,7 @@ def file_renamer(config, cancel=None):
         if param2 == SENTINEL:
             return _cancel()
         preview = [(f, out / f.relative_to(src).parent / f.name.replace(param1, param2)) for f in items]
-    elif mode == "4":
+    elif mode == "sequence":
         param1 = input("Base name (leave blank for numbers only): ")
         if param1 == SENTINEL:
             return _cancel()
@@ -877,10 +879,12 @@ def find_duplicates(config, cancel=None):
         mode = input("Mode? 1=Keep one of each (default)  2=Remove all instances: ").strip()
         if mode == SENTINEL:
             return _cancel()
+        mode = {"1": "keep one copy", "2": "delete all"}.get(mode, mode)
+
     else:
         print(f"  Mode: {mode}")
 
-    if mode == "2":
+    if mode == "delete all":
         hash_counts = {}
         for f in all_files:
             try:
@@ -897,9 +901,14 @@ def find_duplicates(config, cancel=None):
             except Exception:
                 pass
         print(f"  Mode: remove all instances — {len(exclude)} image(s) excluded.")
-    else:
+    elif mode == "keep one copy":
         exclude = duplicates
         print(f"  Mode: keep one of each — {len(exclude)} duplicate(s) excluded.")
+
+    else:
+        print("  Invalid mode.")
+        print("")
+        return
 
     confirm = input(f"Copy {len(all_files) - len(exclude)} image(s) to Output? (y/Enter=yes): ").strip().lower()
     if confirm == SENTINEL:
