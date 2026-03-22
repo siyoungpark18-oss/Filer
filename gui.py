@@ -901,21 +901,20 @@ Example of Workflow
         pages = {}
         for name in ("Paths", "General", "Tools", "Hotkeys", "Throttle", "Buttons"):
             f = tk.Frame(content_area, bg=t["bg"], padx=16, pady=12)
+            f.grid(row=0, column=0, sticky='nsew')
             pages[name] = f
+
+        content_area.grid_rowconfigure(0, weight=1)
+        content_area.grid_columnconfigure(0, weight=1)
 
         tab_lbls = {}
         active_tab = {"name": None}
 
         def show_tab(name):
             active_tab["name"] = name
-            for n, f in pages.items():
-                f.pack_forget()
-            pages[name].pack(fill='both', expand=True)
+            pages[name].tkraise()
             for n, lbl in tab_lbls.items():
-                if n == name:
-                    lbl.configure(bg=t["bg"], font=('', 10, 'bold'), fg=t["fg"])
-                else:
-                    lbl.configure(bg=t["btn_bg"], font=('', 10), fg=t["fg"])
+                lbl.configure(bg=t["hover"] if n == name else t["btn_bg"], fg=t["fg"])
             win.update_idletasks()
 
         tk.Label(sidebar, text="Preferences", font=('', 8),
