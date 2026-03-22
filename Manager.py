@@ -36,6 +36,7 @@ DEFAULTS = {
     "dark_mode":                False,
     "min_free_gb":              2,
     "log_default_expanded":     False,
+    "ask_run_name":             True,
 }
 
 #FUNCTIONS——————————————————————————————————————————————————————————————————————————————————————————————————
@@ -155,12 +156,6 @@ def _is_no_space(e):
 
 
 def collect_image_paths(folder, image_extensions, sub_print=None):
-    """
-    Recursively collect image paths under folder.
-    sub_print: optional callable(str) for sub-folder lines (collapsible log in GUI).
-               Falls back to print() if None.
-    Returns (paths, skipped).
-    """
     _print = sub_print if sub_print is not None else print
     paths = []
     skipped = []
@@ -203,7 +198,9 @@ def save_pdf(image_paths, output_path):
     print(f"  Saved: {output_path.name}  ({size_mb:.1f} MB)")
 
 
-def _get_run_name(prompt="Run name (Enter to skip): "):
+def _get_run_name(config, prompt="Run name (Enter to skip): "):
+    if not config.get("ask_run_name", True):
+        return "Output"
     val = input(prompt).strip()
     if val == SENTINEL:
         return None
@@ -242,10 +239,6 @@ def _print_summary(copied=0, failed=None, skipped=None, label="processed"):
 
 
 def _get_log_section_fns():
-    """
-    Returns (start_section, end_section) callables if running in GUI (LogRedirect),
-    otherwise returns no-op stubs for CLI.
-    """
     import sys as _sys
     log = _sys.stdout
     if hasattr(log, 'start_section') and hasattr(log, 'end_section'):
@@ -259,7 +252,7 @@ def folders_to_pdf(config, cancel=None):
 
     print("Folders to PDF")
     print(f"  Input:  {src}")
-    run_name = _get_run_name()
+    run_name = _get_run_name(config)
     if run_name is None:
         return _cancel()
     out = get_output(config, "folders to pdf", run_name)
@@ -298,12 +291,9 @@ def folders_to_pdf(config, cancel=None):
                 print("")
                 return
             throttle_if_needed(config)
-
-            # open collapsible section before scanning
             start_section(f"[{folder.name}]")
             paths, skipped = collect_image_paths(folder, image_extensions, sub_print=print)
             end_section()
-
             all_paths.extend(paths)
             all_skipped.extend(skipped)
             print(f"  [{folder.name}]  {len(paths)} image(s)"
@@ -352,19 +342,15 @@ def folders_to_pdf(config, cancel=None):
                 print("")
                 return
             throttle_if_needed(config)
-
             start_section(f"[{unit.name}]")
             paths, skipped = collect_image_paths(unit, image_extensions, sub_print=print)
             end_section()
-
             total_skipped.extend(skipped)
             print(f"  [{unit.name}]  {len(paths)} image(s)"
                   + (f"  {len(skipped)} skipped" if skipped else ""))
-
             if not paths:
                 print(f"    No images found, skipping.")
                 continue
-
             safe_name = re.sub(r'[^\w\s\-.]', '', unit.name).strip() or unit.name
             pdf_path = out / f"{safe_name}.pdf"
             try:
@@ -389,7 +375,7 @@ def images_to_pdf(config, cancel=None):
 
     print("Images to PDF")
     print(f"  Input:  {src}")
-    run_name = _get_run_name()
+    run_name = _get_run_name(config)
     if run_name is None:
         return _cancel()
     out = get_output(config, "images to pdf", run_name)
@@ -448,7 +434,7 @@ def folder_renamer(config, cancel=None):
 
     print("Folder Renamer")
     print(f"  Input:  {src}")
-    run_name = _get_run_name()
+    run_name = _get_run_name(config)
     if run_name is None:
         return _cancel()
     out = get_output(config, "folder renamer", run_name)
@@ -573,7 +559,7 @@ def file_renamer(config, cancel=None):
 
     print("File Renamer")
     print(f"  Input:  {src}")
-    run_name = _get_run_name()
+    run_name = _get_run_name(config)
     if run_name is None:
         return _cancel()
     out = get_output(config, "renamed", run_name)
@@ -602,7 +588,6 @@ def file_renamer(config, cancel=None):
 
     if mode == "prefix":
         param1 = input("Prefix to add: ")
-
         if param1 == SENTINEL:
             return _cancel()
         preview = [(f, out / f.relative_to(src).parent / (param1 + f.name)) for f in items]
@@ -680,7 +665,7 @@ def combine_image_sets(config, cancel=None):
 
     print("Combine Image Sets")
     print(f"  Input:  {src}")
-    run_name = _get_run_name()
+    run_name = _get_run_name(config)
     if run_name is None:
         return _cancel()
     out = get_output(config, "combined image set", run_name)
@@ -769,13 +754,13 @@ def image_converter(config, cancel=None):
 
     print("Image Converter")
     print(f"  Input:  {src}")
-    run_name = _get_run_name()
+    run_name = _get_run_name(config)
     if run_name is None:
         return _cancel()
 
     fmt = config.get("default_img_fmt", "ask")
     if fmt == "ask":
-        fmt = input("Format (jpg/png/webp/bmp/tiff, default jpg): ").strip().lower()
+        fmt = input("Format (jpg/png/bmp/tiff, default jpg): ").strip().lower()
         if fmt == SENTINEL:
             return _cancel()
         fmt = fmt or "jpg"
@@ -875,7 +860,7 @@ def find_duplicates(config, cancel=None):
 
     print("Find Duplicates")
     print(f"  Input:  {src}")
-    run_name = _get_run_name()
+    run_name = _get_run_name(config)
     if run_name is None:
         return _cancel()
     out = get_output(config, "find duplicates", run_name)
@@ -933,7 +918,6 @@ def find_duplicates(config, cancel=None):
         if mode == SENTINEL:
             return _cancel()
         mode = {"1": "keep one copy", "2": "delete all"}.get(mode, mode)
-
     else:
         print(f"  Mode: {mode}")
 
@@ -957,7 +941,6 @@ def find_duplicates(config, cancel=None):
     elif mode == "keep one copy":
         exclude = duplicates
         print(f"  Mode: keep one of each — {len(exclude)} duplicate(s) excluded.")
-
     else:
         print("  Invalid mode.")
         print("")
@@ -1005,7 +988,7 @@ def pdf_combiner(config, cancel=None):
 
     print("PDF Combiner")
     print(f"  Input:  {src}")
-    run_name = _get_run_name()
+    run_name = _get_run_name(config)
     if run_name is None:
         return _cancel()
     out = get_output(config, "pdf combined", run_name)
@@ -1091,7 +1074,7 @@ def pdf_to_images(config, cancel=None):
 
     print("PDF to Images")
     print(f"  Input:  {src}")
-    run_name = _get_run_name()
+    run_name = _get_run_name(config)
     if run_name is None:
         return _cancel()
 
@@ -1196,7 +1179,7 @@ def pdf_splitter(config, cancel=None):
 
     print("PDF Splitter")
     print(f"  Input:  {src}")
-    run_name = _get_run_name()
+    run_name = _get_run_name(config)
     if run_name is None:
         return _cancel()
     out = get_output(config, "pdf split", run_name)
