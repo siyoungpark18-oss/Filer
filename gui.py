@@ -1017,6 +1017,7 @@ Example of Workflow
         general_fields = [
             ("allow_concurrent_jobs",  "Allow Multiple Jobs at Once",        "check", None),
             ("auto_clear_input",       "Auto Clear Input After Job",         "check", None),
+            ("ask_run_name",           "Ask for Run Name",                   "check", None),
             ("replace_output",         "Replace Output Each Run",            "check", None),
             ("sort_output",            "Sort Output by Operation",           "check", None),
             ("guide_empty_input",      "Dim Tools when Input Empty",         "check", None),
