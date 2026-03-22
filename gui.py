@@ -1014,9 +1014,9 @@ Example of Workflow
         tools_fields = [
             ("default_folders_to_pdf_mode", "Folders to PDF: Default Mode", "combo", ["ask", "combine", "individual"]),
             ("default_sort",               "Default Sort Mode",            "combo", ["ask","natural","none"]),
-            ("default_file_renamer_mode",  "File Renamer: Default Mode",   "combo", ["ask", "1", "2", "3", "4"]),
+            ("default_file_renamer_mode",  "File Renamer: Default Mode",   "combo", ["ask", "prefix", "suffix", "replace", "sequence"]),
             ("default_img_fmt", "Default Image Format", "combo", ["ask", "jpg", "png", "webp", "bmp", "tiff"]),
-            ("default_dedupe_mode", "Find Duplicates: Default Mode", "combo", ["ask", "1", "2"]),
+            ("default_dedupe_mode", "Find Duplicates: Default Mode", "combo", ["ask", "keep one copy", "delete all"]),
             ("default_dpi",                "Default DPI (PDF to Images)",  "combo", ["ask","72","96","150","200","300","600"]),
         ]
 
