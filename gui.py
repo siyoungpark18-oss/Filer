@@ -826,7 +826,12 @@ Example of Workflow
         line_len = max(10, int(55 - (font_size - 7) * 2.5))
         line = "─" * line_len
         timestamp = datetime.now().strftime("%H:%M:%S")
-        print(f"\n{timestamp}\n{line}\n")
+
+        self.log.configure(state='normal')
+        self.log.tag_configure("ts_dim", foreground=self._theme()["log_dim"])
+        self.log.insert(tk.END, f"\n{timestamp}\n{line}\n\n", ("ts_dim",))
+        self.log.see(tk.END)
+        self.log.configure(state='disabled')
 
         self._running_jobs[job_name] = self._running_jobs.get(job_name, 0) + 1
         self._update_status_label()
