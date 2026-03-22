@@ -821,6 +821,13 @@ Example of Workflow
                 return
         self.cancel_event.clear()
 
+        from datetime import datetime
+        font_size = self._log_font_size
+        line_len = max(10, int(55 - (font_size - 7) * 2.5))
+        line = "─" * line_len
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        print(f"\n{timestamp}\n{line}\n")
+
         self._running_jobs[job_name] = self._running_jobs.get(job_name, 0) + 1
         self._update_status_label()
 
