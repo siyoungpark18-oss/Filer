@@ -112,6 +112,8 @@ def throttle_if_needed(config):
             print(f"  Paused — {', '.join(reasons)}. Free up resources or raise the throttle limit in Preferences.")
             warned = True
         time.sleep(0.5)
+    if warned:
+        print(f"  Resuming...")
 
 
 def natural_sort_key(name):
@@ -536,9 +538,13 @@ def file_renamer(config, cancel=None):
 
     print(f"  Found {len(items)} file(s).")
     print("  Modes: 1=Prefix  2=Suffix  3=Replace  4=Sequence")
-    mode = input("Choose mode (1-4): ").strip()
-    if mode == SENTINEL:
-        return _cancel()
+    mode = config.get("default_file_renamer_mode", "ask")
+    if mode == "ask":
+        mode = input("Choose mode (1-4): ").strip()
+        if mode == SENTINEL:
+            return _cancel()
+    else:
+        print(f"  Mode: {mode}")
 
     if mode == "1":
         param1 = input("Prefix to add: ")
