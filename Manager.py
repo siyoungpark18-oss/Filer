@@ -1293,6 +1293,8 @@ def status(config):
     src = get_input(config)
     out_base = Path(config["output"]) / "output"
 
+    start_section, end_section = _get_log_section_fns()
+
     print("")
     if src.exists():
         items = list(src.iterdir())
@@ -1301,30 +1303,48 @@ def status(config):
         parts = []
         if dirs:  parts.append(f"{len(dirs)} folder(s)")
         if files: parts.append(f"{len(files)} file(s)")
-        print(f"  Input: {', '.join(parts) if parts else 'empty'}")
+
+        print(f"Input  —  {', '.join(parts) if parts else 'empty'}")
+
         for d in sorted(dirs, key=lambda x: natural_sort_key(x.name)):
             sub_dirs = sorted([i for i in d.iterdir() if i.is_dir()], key=lambda x: natural_sort_key(x.name))
             file_count = sum(1 for _ in d.rglob("*") if _.is_file())
-            print(f"    [folder] {d.name}/  ({file_count} file(s))")
-            for sd in sub_dirs:
-                sc = sum(1 for _ in sd.rglob("*") if _.is_file())
-                print(f"             {sd.name}/  ({sc} file(s))")
+
+            if sub_dirs:
+                start_section(f"  [folder] {d.name}/  ({file_count} file(s))")
+                for sd in sub_dirs:
+                    sc = sum(1 for _ in sd.rglob("*") if _.is_file())
+                    print(f"    {sd.name}/  ({sc} file(s))")
+                end_section()
+            else:
+                print(f"  [folder] {d.name}/  ({file_count} file(s))")
+
         for f in sorted(files, key=lambda x: natural_sort_key(x.name)):
-            print(f"    [file]   {f.name}")
+            print(f"  [file]   {f.name}")
+
     else:
-        print("  Input: (doesn't exist)")
+        print("Input  —  (doesn't exist)")
+
+    print("")
 
     if out_base.exists():
         items = [i for i in out_base.iterdir() if i.is_dir()]
-        if items:
-            print(f"  Output:")
-            for op in sorted(items, key=lambda x: natural_sort_key(x.name)):
-                file_count = sum(1 for f in op.rglob("*") if f.is_file())
-                print(f"    {op.name}/  ({file_count} file(s))")
-        else:
-            print(f"  Output: empty")
+        print(f"Output  —  {len(items)} folder(s)" if items else "Output  —  empty")
+        for op in sorted(items, key=lambda x: natural_sort_key(x.name)):
+            sub_dirs = sorted([i for i in op.iterdir() if i.is_dir()], key=lambda x: natural_sort_key(x.name))
+            file_count = sum(1 for f in op.rglob("*") if f.is_file())
+
+            if sub_dirs:
+                start_section(f"  {op.name}/  ({file_count} file(s))")
+                for sd in sub_dirs:
+                    sc = sum(1 for f in sd.rglob("*") if f.is_file())
+                    print(f"    {sd.name}/  ({sc} file(s))")
+                end_section()
+            else:
+                print(f"  {op.name}/  ({file_count} file(s))")
     else:
-        print(f"  Output: empty")
+        print("Output  —  empty")
+
     print("")
 
 
