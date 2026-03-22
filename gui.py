@@ -124,14 +124,14 @@ class LogRedirect(io.TextIOBase):
             cfg = {"foreground": t["log_warn"]}
         elif s.startswith("Done!") or s.startswith("→") or "Done!" in s:
             tag = "log_success"
-            cfg = {"foreground": t["log_success"], "font": ("Courier", self.app._log_font_size, "bold")}
+            cfg = {"foreground": t["log_success"]}
         elif (s.startswith("Saved:") or s.startswith("converted:") or
               s.startswith("Total:") or s.startswith("PDFs saved:") or
               s.startswith("combined:") or s.startswith("renamed:") or
               s.startswith("copied:") or s.startswith("pages exported:") or
               s.startswith("scanned:")):
             tag = "log_bold"
-            cfg = {"font": ("Courier", self.app._log_font_size, "bold")}
+            cfg = {}
         elif msg.startswith("    ") and self._active_section:
             tag = "log_dim"
             cfg = {"foreground": t["log_dim"]}
@@ -1014,12 +1014,13 @@ Example of Workflow
         ]
 
         tools_fields = [
-            ("default_folders_to_pdf_mode", "Folders to PDF: Default Mode", "combo", ["ask", "combine", "individual"]),
-            ("default_sort",               "Default Sort Mode",            "combo", ["ask","natural","none"]),
-            ("default_file_renamer_mode",  "File Renamer: Default Mode",   "combo", ["ask", "prefix", "suffix", "replace", "sequence"]),
-            ("default_img_fmt", "Default Image Format", "combo", ["ask", "jpg", "png", "webp", "bmp", "tiff"]),
-            ("default_dedupe_mode", "Find Duplicates: Default Mode", "combo", ["ask", "keep one copy", "delete all"]),
-            ("default_dpi",                "Default DPI (PDF to Images)",  "combo", ["ask","72","96","150","200","300","600"]),
+            ("default_folders_to_pdf_mode", "Folders to PDF: Default Mode",   "combo", ["ask", "combine", "individual"]),
+            ("default_sort",               "Default Sort Mode",               "combo", ["ask","natural","none"]),
+            ("default_folder_renamer_mode", "Folder Renamer: Default Mode",   "combo", ["ask", "prefix", "suffix", "replace", "extract number"]),
+            ("default_file_renamer_mode",  "File Renamer: Default Mode",      "combo", ["ask", "prefix", "suffix", "replace", "sequence"]),
+            ("default_img_fmt", "Default Image Format",                       "combo", ["ask", "jpg", "png", "webp", "bmp", "tiff"]),
+            ("default_dedupe_mode", "Find Duplicates: Default Mode",          "combo", ["ask", "keep one copy", "delete all"]),
+            ("default_dpi",                "Default DPI (PDF to Images)",     "combo", ["ask","72","96","150","200","300","600"]),
         ]
 
         hotkey_fields = [
