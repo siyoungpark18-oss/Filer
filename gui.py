@@ -202,7 +202,7 @@ TOOL_LABELS = {
 class App:
     def __init__(self, root):
         self.root = root
-        self.root.title("File & Folder Manager")
+        self.root.title("Filer")
         self.root.resizable(True, True)
         self.config = load_config()
         self.cancel_event = threading.Event()
