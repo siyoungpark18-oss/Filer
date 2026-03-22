@@ -47,6 +47,7 @@ def load_config():
         return data
     return DEFAULTS.copy()
 
+
 def save_config(config):
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(CONFIG_PATH, 'w') as f:
@@ -453,34 +454,82 @@ def folder_renamer(config, cancel=None):
     if not _check_disk_space(out, config):
         return
 
-    preview = []
-    skipped = []
+    folders = sorted([f for f in src.iterdir() if f.is_dir()],
+                     key=lambda x: natural_sort_key(x.name))
 
-    def collect(folder, dest_parent):
-        subfolders = sorted([f for f in folder.iterdir() if f.is_dir()],
-                            key=lambda x: natural_sort_key(x.name))
-        for sub in subfolders:
-            match = re.search(r'\d+(?:\.\d+)?', sub.name)
-            if match:
-                raw = match.group()
-                if '.' in raw:
-                    integer, decimal = raw.split('.', 1)
-                    new_name = f"{int(integer)}.{decimal}"
-                else:
-                    new_name = str(int(raw))
-                preview.append((sub, dest_parent / new_name))
-            else:
-                skipped.append((sub, "no number found"))
-                collect(sub, dest_parent / sub.name)
-
-    collect(src, out)
-
-    if not preview and not skipped:
+    if not folders:
         print("  No folders found in Input!")
         print("")
         return
 
-    print(f"  Found {len(preview)} folder(s) to rename{f', {len(skipped)} skipped' if skipped else ''}.")
+    print(f"  Found {len(folders)} folder(s).")
+    print("  Modes: 1=Prefix  2=Suffix  3=Replace  4=Extract Number")
+    mode = config.get("default_folder_renamer_mode", "ask")
+    if mode == "ask":
+        mode = input("Choose mode (1-4, default 4): ").strip() or "4"
+        if mode == SENTINEL:
+            return _cancel()
+        mode = {"1": "prefix", "2": "suffix", "3": "replace", "4": "extract number"}.get(mode, mode)
+    else:
+        print(f"  Mode: {mode}")
+
+    preview = []
+    skipped = []
+
+    if mode == "prefix":
+        param1 = input("Prefix to add: ")
+        if param1 == SENTINEL:
+            return _cancel()
+        for f in folders:
+            preview.append((f, out / (param1 + f.name)))
+
+    elif mode == "suffix":
+        param1 = input("Suffix to add: ")
+        if param1 == SENTINEL:
+            return _cancel()
+        for f in folders:
+            preview.append((f, out / (f.name + param1)))
+
+    elif mode == "replace":
+        param1 = input("Find: ")
+        if param1 == SENTINEL:
+            return _cancel()
+        param2 = input("Replace with (Enter for blank): ")
+        if param2 == SENTINEL:
+            return _cancel()
+        for f in folders:
+            preview.append((f, out / f.name.replace(param1, param2)))
+
+    elif mode == "extract number":
+        def collect(folder, dest_parent):
+            subfolders = sorted([f for f in folder.iterdir() if f.is_dir()],
+                                key=lambda x: natural_sort_key(x.name))
+            for sub in subfolders:
+                match = re.search(r'\d+(?:\.\d+)?', sub.name)
+                if match:
+                    raw = match.group()
+                    if '.' in raw:
+                        integer, decimal = raw.split('.', 1)
+                        new_name = f"{int(integer)}.{decimal}"
+                    else:
+                        new_name = str(int(raw))
+                    preview.append((sub, dest_parent / new_name))
+                else:
+                    skipped.append((sub, "no number found"))
+                    collect(sub, dest_parent / sub.name)
+        collect(src, out)
+
+    else:
+        print("  Invalid mode.")
+        print("")
+        return
+
+    if not preview and not skipped:
+        print("  Nothing to rename.")
+        print("")
+        return
+
+    print(f"  {len(preview)} folder(s) to rename{f', {len(skipped)} skipped' if skipped else ''}.")
     print("  Preview (first 5):")
     for old, new in preview[:5]:
         print(f"    {old.name}  →  {new.name}")
@@ -495,6 +544,7 @@ def folder_renamer(config, cancel=None):
             print("")
             return
         try:
+            new.parent.mkdir(parents=True, exist_ok=True)
             shutil.copytree(str(old), str(new), dirs_exist_ok=True)
             copied += 1
         except OSError as e:
