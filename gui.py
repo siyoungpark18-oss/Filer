@@ -214,6 +214,7 @@ class App:
         sys.stdout = LogRedirect(self.log, self)
         sys.stderr = LogRedirect(self.log, self)
         self._poll_input()
+        self._status_running = False
 
     def _theme(self):
         return THEMES["dark"] if self._dark else THEMES["light"]
@@ -1210,7 +1211,17 @@ Example of Workflow
         self._run(lambda: pdf_to_images(self.config, self.cancel_event), job_name="PDF to Images")
 
     def run_status(self):
-        self._run(lambda: status(self.config), ignore_lock=True, job_name="Status")
+        if self._status_running:
+            return
+
+        def _run():
+            self._status_running = True
+            try:
+                status(self.config)
+            finally:
+                self._status_running = False
+
+        self._run(_run, ignore_lock=True, job_name="Status")
 
 
 if __name__ == "__main__":
