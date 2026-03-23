@@ -55,7 +55,6 @@ THEMES = {
 
 #LOG——————————————————————————————————————————————————————————————————————————————————————————————————
 class LogRedirect(io.TextIOBase):
-    MAX_LINES = 500
     REPEAT_THRESHOLD = 1
 
     def __init__(self, log_widget, app):
@@ -167,9 +166,6 @@ class LogRedirect(io.TextIOBase):
         self.log.insert(tk.END, msg + '\n', insert_tags)
 
         line_count = int(self.log.index('end-1c').split('.')[0])
-        if line_count > self.MAX_LINES:
-            excess = line_count - self.MAX_LINES
-            self.log.delete('1.0', f'{excess + 1}.0')
 
         self.log.see(tk.END)
         self.log.configure(state='disabled')
