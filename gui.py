@@ -65,6 +65,9 @@ class LogRedirect(io.TextIOBase):
         self._active_section = None
 
     def start_section(self, header):
+        # Clear any unclosed previous section so its hide_tag doesn't bleed
+        self._active_section = None
+
         tag = f"section_{id(header)}_{self.log.index(tk.END)}"
         hide_tag = f"hide_{tag}"
         expanded = self.app.config.get("log_default_expanded", False)
@@ -73,7 +76,8 @@ class LogRedirect(io.TextIOBase):
         arrow = "▲" if expanded else "▼"
         line = f"{arrow} {header}\n"
 
-        self.log.tag_configure(tag, foreground=self.app._theme()["fg"])
+        # Use log_fg so the header always matches normal log text color
+        self.log.tag_configure(tag, foreground=self.app._theme()["log_fg"])
         self.log.insert(tk.END, line, (tag,))
         self.log.tag_configure(hide_tag, elide=not expanded)
 
@@ -204,6 +208,7 @@ class App:
         self._open_accordion = {}
         self._dark = self.config.get("dark_mode", False)
         self._btn_labels = {}
+        self._suboption_labels = {}  # tool_label -> [opt_lbl widgets]
         self._last_input_count = -1
         patch_input()
         self._build_ui()
@@ -361,6 +366,15 @@ class App:
                     lbl.configure(fg=t["hint_fg"] if empty else t["fg"], bg=t["bg"])
             except tk.TclError:
                 pass
+
+        # Dim accordion sub-option labels to match their parent tool button
+        for tool_label, opt_lbls in self._suboption_labels.items():
+            color = t["hint_fg"] if empty else t["fg"]
+            for lbl in opt_lbls:
+                try:
+                    lbl.configure(fg=color)
+                except tk.TclError:
+                    pass
 
     def _poll_input(self):
         try:
@@ -821,11 +835,12 @@ Example of Workflow
 
     def _rebuild_buttons(self):
         self._btn_labels.clear()
+        self._suboption_labels.clear()
         self._open_accordion = {}
         for w in self._btn_frame.winfo_children():
             w.destroy()
 
-        if self.config.get("ui_mode", "dropdown") == "dropdown":
+        if self.config.get("ui_mode", "classic") == "dropdown":
             self._build_dropdown_buttons()
         else:
             self._build_classic_buttons()
@@ -1014,6 +1029,7 @@ Example of Workflow
                 opt_lbl = tk.Label(row, text=opt_label, bg=t["bg"], fg=t["fg"],
                                    font=('', 9), anchor='w')
                 opt_lbl.pack(side='left', fill='x', expand=True)
+                self._suboption_labels.setdefault(label, []).append(opt_lbl)
 
                 rbf = tk.Frame(row, bg=t["fg"], padx=1, pady=1)
                 rbl = tk.Label(rbf, text="▶", bg=t["bg"], fg=t["fg"],
