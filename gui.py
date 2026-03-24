@@ -1,5 +1,5 @@
 #IMPORTS——————————————————————————————————————————————————————————————————————————————————————————————————
-import tkinter as tk #test
+import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox, filedialog
 from pathlib import Path
 import threading
@@ -111,7 +111,6 @@ class LogRedirect(io.TextIOBase):
         self.log.configure(state='disabled')
 
     def _style_tag_for(self, msg):
-        """Return a tk tag name for this line, configuring it if needed."""
         t = self.app._theme()
         s = msg.strip()
 
@@ -164,9 +163,6 @@ class LogRedirect(io.TextIOBase):
             self._rep_count = 1
 
         self.log.insert(tk.END, msg + '\n', insert_tags)
-
-        line_count = int(self.log.index('end-1c').split('.')[0])
-
         self.log.see(tk.END)
         self.log.configure(state='disabled')
         return len(msg)
@@ -205,6 +201,7 @@ class App:
         self.config = load_config()
         self.cancel_event = threading.Event()
         self._running_jobs = {}
+        self._open_accordion = {}
         self._dark = self.config.get("dark_mode", False)
         self._btn_labels = {}
         self._last_input_count = -1
@@ -215,6 +212,50 @@ class App:
         sys.stderr = LogRedirect(self.log, self)
         self._poll_input()
         self._status_running = False
+
+    # ── tool option definitions ───────────────────────────────────────────────
+    # Maps tool label → list of option keys.
+    # Each option key maps to a (config_key, config_value) pair that will be
+    # temporarily injected so Manager functions don't prompt again.
+    TOOL_OPTIONS = {
+        "Folders to PDF":     ["combine", "individual"],
+        "Images to PDF":      [],
+        "Folder Renamer":     ["prefix", "suffix", "replace", "extract number"],
+        "File Renamer":       ["prefix", "suffix", "replace", "sequence"],
+        "Combine Image Sets": [],
+        "Image Converter":    ["jpg", "png", "webp", "bmp", "tiff"],
+        "Find Duplicates":    ["keep one copy", "delete all"],
+        "PDF Combiner":       [],
+        "PDF Splitter":       [],
+        "PDF to Images":      ["jpg", "png"],
+    }
+
+    # Maps tool label → the config key that controls its mode
+    TOOL_MODE_CONFIG_KEY = {
+        "Folders to PDF":  "default_folders_to_pdf_mode",
+        "Folder Renamer":  "default_folder_renamer_mode",
+        "File Renamer":    "default_file_renamer_mode",
+        "Image Converter": "default_img_fmt",
+        "Find Duplicates": "default_dedupe_mode",
+        "PDF to Images":   "default_img_fmt",
+    }
+
+    OPTION_LABELS = {
+        "combine":        "Combine all → one PDF",
+        "individual":     "One PDF per folder",
+        "prefix":         "Prefix",
+        "suffix":         "Suffix",
+        "replace":        "Find & Replace",
+        "extract number": "Extract Number",
+        "sequence":       "Sequence",
+        "jpg":            "JPG",
+        "png":            "PNG",
+        "webp":           "WebP",
+        "bmp":            "BMP",
+        "tiff":           "TIFF",
+        "keep one copy":  "Keep one copy",
+        "delete all":     "Delete all instances",
+    }
 
     def _theme(self):
         return THEMES["dark"] if self._dark else THEMES["light"]
@@ -750,6 +791,7 @@ Example of Workflow
                  bg=t["btn_bg"], fg=t["fg"], padx=6, pady=4).pack()
 
     def _make_button(self, parent, text, cmd, tooltip=None):
+        """Standard flat button matching old UI dimensions (width=22)."""
         t = self._theme()
         row = tk.Frame(parent, bg=t["bg"])
         row.pack(pady=2, fill='x')
@@ -775,41 +817,270 @@ Example of Workflow
 
         return f, lbl
 
+    # ── button rebuilding ─────────────────────────────────────────────────────
+
     def _rebuild_buttons(self):
         self._btn_labels.clear()
+        self._open_accordion = {}
         for w in self._btn_frame.winfo_children():
             w.destroy()
 
-        fixed_sections = [
-            ("Input", [
-                ("Add Input", self.pick_files),
-                ("Clear Input", self.clear_input),
-                ("Open Input", self.open_input),
-            ]),
-            ("Utility", [
-                ("Status", self.run_status),
-                ("Clear Log", self.clear_log),
-                ("Open Output", self.open_output),
-                ("Clear Output", self.clear_output),
-                ("Cancel Job", self.cancel_job),
-            ]),
-        ]
+        if self.config.get("ui_mode", "dropdown") == "dropdown":
+            self._build_dropdown_buttons()
+        else:
+            self._build_classic_buttons()
 
+        self._apply_theme()
+        self._update_button_states()
+
+    def _build_classic_buttons(self):
+        """
+        Original flat-button sidebar.
+        Order: tool sections (Folder, File) on top; Input and Utility below.
+        """
         from collections import OrderedDict
         toggleable_sections = OrderedDict()
         for key, section, label, method in self.TOGGLEABLE:
             if self.config.get(key, True):
-                toggleable_sections.setdefault(section, []).append((label, getattr(self, method)))
+                toggleable_sections.setdefault(section, []).append(
+                    (label, getattr(self, method)))
 
+        fixed_sections = [
+            ("Input", [
+                ("Add Input",    self.pick_files),
+                ("Clear Input",  self.clear_input),
+                ("Open Input",   self.open_input),
+            ]),
+            ("Utility", [
+                ("Status",       self.run_status),
+                ("Clear Log",    self.clear_log),
+                ("Open Output",  self.open_output),
+                ("Clear Output", self.clear_output),
+                ("Cancel Job",   self.cancel_job),
+            ]),
+        ]
+
+        # Tools first, then fixed
         all_sections = list(toggleable_sections.items()) + fixed_sections
 
         for section_label, cmds in all_sections:
-            tk.Label(self._btn_frame, text=section_label, font=('', 10, 'bold')).pack(anchor='w', pady=(8, 2))
+            tk.Label(self._btn_frame, text=section_label,
+                     font=('', 10, 'bold')).pack(anchor='w', pady=(8, 2))
             for label, cmd in cmds:
-                self._make_button(self._btn_frame, label, cmd, tooltip=self.TOOLTIPS.get(label))
+                self._make_button(self._btn_frame, label, cmd,
+                                  tooltip=self.TOOLTIPS.get(label))
 
-        self._apply_theme()
-        self._update_button_states()
+    def _build_dropdown_buttons(self):
+        """
+        Accordion sidebar.
+        Order: tool sections (Folder, File) on top; Input and Utility below.
+        Button dimensions match the classic flat style (width=22).
+        """
+        t = self._theme()
+
+        from collections import OrderedDict
+        tool_rows = OrderedDict()
+        for key, section, label, method in self.TOGGLEABLE:
+            if self.config.get(key, True):
+                tool_rows.setdefault(section, []).append(
+                    (label, getattr(self, method)))
+
+        # ── tool accordion sections (top) ─────────────────────────────────────
+        for section_label, items in tool_rows.items():
+            tk.Label(self._btn_frame, text=section_label,
+                     font=('', 10, 'bold'), bg=t["bg"], fg=t["fg"]
+                     ).pack(anchor='w', pady=(8, 2))
+            for label, run_fn in items:
+                self._make_tool_accordion(self._btn_frame, label, run_fn)
+
+        # ── fixed sections: Input + Utility (bottom) ──────────────────────────
+        for section_label, cmds in [
+            ("Input", [
+                ("Add Input",    self.pick_files),
+                ("Clear Input",  self.clear_input),
+                ("Open Input",   self.open_input),
+            ]),
+            ("Utility", [
+                ("Status",       self.run_status),
+                ("Clear Log",    self.clear_log),
+                ("Open Output",  self.open_output),
+                ("Clear Output", self.clear_output),
+                ("Cancel Job",   self.cancel_job),
+            ]),
+        ]:
+            tk.Label(self._btn_frame, text=section_label,
+                     font=('', 10, 'bold'), bg=t["bg"], fg=t["fg"]
+                     ).pack(anchor='w', pady=(8, 2))
+            for label, cmd in cmds:
+                self._make_button(self._btn_frame, label, cmd,
+                                  tooltip=self.TOOLTIPS.get(label))
+
+    def _make_tool_accordion(self, parent, label, run_fn):
+        """
+        One collapsible tool row.  The header button matches classic width=22.
+        Sub-option rows sit indented beneath it when expanded.
+        """
+        t = self._theme()
+        options = self.TOOL_OPTIONS.get(label, [])
+
+        outer = tk.Frame(parent, bg=t["bg"])
+        outer.pack(fill='x', pady=1)
+
+        # ── header row ────────────────────────────────────────────────────────
+        hdr_row = tk.Frame(outer, bg=t["bg"])
+        hdr_row.pack(fill='x')
+
+        arrow_var = tk.StringVar(value="▶")
+
+        # Bordered label — same width=22 as classic buttons
+        hdr_f = tk.Frame(hdr_row, bg=t["fg"], padx=1, pady=1)
+        hdr_lbl = tk.Label(hdr_f, text=label, bg=t["bg"], fg=t["fg"],
+                           font=('', 10), width=22, cursor="hand2", anchor='w')
+        # prepend arrow inside the label text dynamically
+        hdr_lbl.pack()
+        hdr_f.pack(side='left')
+
+        # register so dimming/state tracking works
+        self._btn_labels[label] = hdr_lbl
+
+        if self.config.get("show_tooltips", True) and label in self.TOOLTIPS:
+            info = tk.Label(hdr_row, text="i", bg=t["bg"], fg=t["hint_fg"],
+                            font=('', 9), cursor="hand2", padx=2)
+            info.pack(side='left', padx=(3, 0))
+            info.bind("<Enter>", lambda e: info.configure(bg=self._theme()["hover"]))
+            info.bind("<Leave>", lambda e: info.configure(bg=self._theme()["bg"]))
+            self._show_tooltip(info, self.TOOLTIPS[label])
+
+        # ── expand/collapse body ──────────────────────────────────────────────
+        body = tk.Frame(outer, bg=t["bg"])
+        state = {"open": False}
+
+        def _update_label(is_open, lbl=hdr_lbl, lbl_text=label):
+            prefix = "▼ " if is_open else "▶ "
+            lbl.configure(text=prefix + lbl_text)
+
+        _update_label(False)
+
+        def set_open(label=label, state=state, body=body):
+            for lbl_key, info in self._open_accordion.items():
+                if lbl_key != label and info["open"]:
+                    info["close"]()
+
+            if state["open"]:
+                body.pack_forget()
+                _update_label(False)
+                state["open"] = False
+                self._open_accordion[label]["open"] = False
+            else:
+                body.pack(fill='x')
+                _update_label(True)
+                state["open"] = True
+                self._open_accordion[label]["open"] = True
+
+        def close_fn(body=body, state=state):
+            body.pack_forget()
+            _update_label(False)
+            state["open"] = False
+
+        self._open_accordion[label] = {"open": False, "close": close_fn}
+
+        for w in (hdr_f, hdr_lbl):
+            w.bind("<Button-1>", lambda e, fn=set_open: fn())
+            w.bind("<Enter>", lambda e: hdr_lbl.configure(bg=self._theme()["hover"]))
+            w.bind("<Leave>", lambda e: hdr_lbl.configure(bg=self._theme()["bg"]))
+
+        # ── body contents ─────────────────────────────────────────────────────
+        if not options:
+            # No sub-options: single "▶  Run" row
+            run_row = tk.Frame(body, bg=t["bg"])
+            run_row.pack(fill='x', pady=1, padx=(18, 0))
+
+            run_lbl = tk.Label(run_row, text="▶  Run", bg=t["bg"], fg=t["fg"],
+                               font=('', 9), anchor='w', cursor="hand2", padx=4)
+            run_lbl.pack(side='left')
+            run_lbl.bind("<Button-1>",
+                         lambda e, fn=run_fn, jn=label:
+                         self._inject_and_run(fn, None, jn))
+            run_lbl.bind("<Enter>",
+                         lambda e, b=run_lbl: b.configure(bg=self._theme()["hover"]))
+            run_lbl.bind("<Leave>",
+                         lambda e, b=run_lbl: b.configure(bg=self._theme()["bg"]))
+        else:
+            for opt in options:
+                opt_label = self.OPTION_LABELS.get(opt, opt)
+                row = tk.Frame(body, bg=t["bg"])
+                row.pack(fill='x', pady=1, padx=(18, 0))
+
+                opt_lbl = tk.Label(row, text=opt_label, bg=t["bg"], fg=t["fg"],
+                                   font=('', 9), anchor='w')
+                opt_lbl.pack(side='left', fill='x', expand=True)
+
+                rbf = tk.Frame(row, bg=t["fg"], padx=1, pady=1)
+                rbl = tk.Label(rbf, text="▶", bg=t["bg"], fg=t["fg"],
+                               font=('', 9), padx=5, cursor="hand2")
+                rbl.pack()
+                rbf.pack(side='right', padx=(4, 2))
+
+                rbl.bind("<Button-1>",
+                         lambda e, fn=run_fn, o=opt, jn=label:
+                         self._inject_and_run(fn, o, jn))
+                rbl.bind("<Enter>",
+                         lambda e, b=rbl: b.configure(bg=self._theme()["hover"]))
+                rbl.bind("<Leave>",
+                         lambda e, b=rbl: b.configure(bg=self._theme()["bg"]))
+                opt_lbl.bind("<Enter>",
+                             lambda e, b=opt_lbl: b.configure(bg=self._theme()["hover"]))
+                opt_lbl.bind("<Leave>",
+                             lambda e, b=opt_lbl: b.configure(bg=self._theme()["bg"]))
+
+    # Direct Manager function lambdas — used by accordion so we never
+    # double-nest _run (run_X methods call _run internally).
+    @property
+    def _tool_fns(self):
+        return {
+            "Folders to PDF":     lambda: folders_to_pdf(self.config, self.cancel_event),
+            "Images to PDF":      lambda: images_to_pdf(self.config, self.cancel_event),
+            "Folder Renamer":     lambda: folder_renamer(self.config, self.cancel_event),
+            "File Renamer":       lambda: file_renamer(self.config, self.cancel_event),
+            "Combine Image Sets": lambda: combine_image_sets(self.config, self.cancel_event),
+            "Image Converter":    lambda: image_converter(self.config, self.cancel_event),
+            "Find Duplicates":    lambda: find_duplicates(self.config, self.cancel_event),
+            "PDF Combiner":       lambda: pdf_combiner(self.config, self.cancel_event),
+            "PDF Splitter":       lambda: pdf_splitter(self.config, self.cancel_event),
+            "PDF to Images":      lambda: pdf_to_images(self.config, self.cancel_event),
+        }
+
+    def _inject_and_run(self, run_fn, choice, job_name):
+        """
+        Called when an accordion option button is clicked.
+        Temporarily overrides the relevant config key so the Manager function
+        won't prompt for mode again, then calls _run directly with the Manager
+        function (bypassing the run_X wrapper methods to avoid double _run).
+        """
+        # Always use the direct Manager lambda to avoid nested _run calls
+        direct_fn = self._tool_fns.get(job_name)
+        if direct_fn is None:
+            # Fallback for tools with no options (shouldn't happen in practice)
+            self._run(run_fn, job_name=job_name)
+            return
+
+        config_key = self.TOOL_MODE_CONFIG_KEY.get(job_name) if choice is not None else None
+
+        if config_key:
+            original = self.config.get(config_key)
+            self.config[config_key] = choice
+
+            fn_snapshot = self._tool_fns[job_name]  # capture after override
+
+            def run_with_restore():
+                try:
+                    fn_snapshot()
+                finally:
+                    self.config[config_key] = original
+
+            self._run(run_with_restore, job_name=job_name)
+        else:
+            self._run(direct_fn, job_name=job_name)
 
     def _run(self, fn, ignore_lock=False, job_name="Job"):
         if self._running_jobs and not ignore_lock:
@@ -982,7 +1253,7 @@ Example of Workflow
             lbl.bind("<Leave>", lambda e: lbl.configure(bg=t["bg"]))
             return lbl
 
-        # ── PATHS tab ─────────────────────────────────────────────────────────
+        # ── PATHS tab ──────────────────────────────────────────────────────────
         p = pages["Paths"]
         r = 0
         tk.Label(p, text="Paths", font=('', 11, 'bold'), bg=t["bg"]).grid(
@@ -1006,12 +1277,13 @@ Example of Workflow
             row=r, column=0, sticky='w', pady=(6, 0))
         r += 1
 
-        # ── GENERAL tab ───────────────────────────────────────────────────────
+        # ── GENERAL tab ────────────────────────────────────────────────────────
         p = pages["General"]
         tk.Label(p, text="General", font=('', 11, 'bold'), bg=t["bg"]).grid(
             row=0, column=0, columnspan=2, sticky='w', pady=(0, 8))
 
         general_fields = [
+            ("ui_mode",                "UI Mode",                            "combo", ["classic", "dropdown"]),
             ("allow_concurrent_jobs",  "Allow Multiple Jobs at Once",        "check", None),
             ("auto_clear_input",       "Auto Clear Input After Job",         "check", None),
             ("ask_run_name",           "Ask for Run Name",                   "check", None),
@@ -1028,9 +1300,9 @@ Example of Workflow
             ("default_sort",               "Default Sort Mode",               "combo", ["ask","natural","none"]),
             ("default_folder_renamer_mode", "Folder Renamer: Default Mode",   "combo", ["ask", "prefix", "suffix", "replace", "extract number"]),
             ("default_file_renamer_mode",  "File Renamer: Default Mode",      "combo", ["ask", "prefix", "suffix", "replace", "sequence"]),
-            ("default_img_fmt", "Default Image Format",                       "combo", ["ask", "jpg", "png", "webp", "bmp", "tiff"]),
-            ("default_dedupe_mode", "Find Duplicates: Default Mode",          "combo", ["ask", "keep one copy", "delete all"]),
-            ("default_dpi",                "Default DPI (PDF to Images)",     "combo", ["ask","72","96","150","200","300","600"]),
+            ("default_img_fmt",            "Default Image Format",            "combo", ["ask", "jpg", "png", "webp", "bmp", "tiff"]),
+            ("default_dedupe_mode",        "Find Duplicates: Default Mode",   "combo", ["ask", "keep one copy", "delete all"]),
+            ("default_dpi",               "Default DPI (PDF to Images)",      "combo", ["ask","72","96","150","200","300","600"]),
         ]
 
         hotkey_fields = [
