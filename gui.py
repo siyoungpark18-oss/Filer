@@ -999,28 +999,24 @@ Example of Workflow
 
         self._open_accordion[label] = {"open": False, "close": close_fn}
 
-        for w in (hdr_f, hdr_lbl):
-            w.bind("<Button-1>", lambda e, fn=set_open: fn())
-            w.bind("<Enter>", lambda e: hdr_lbl.configure(bg=self._theme()["hover"]))
-            w.bind("<Leave>", lambda e: hdr_lbl.configure(bg=self._theme()["bg"]))
-
-        # ── body contents ─────────────────────────────────────────────────────
+        # Tools with no sub-options: clicking the header runs directly.
+        # Tools with sub-options: clicking the header toggles expand/collapse.
         if not options:
-            # No sub-options: single "▶  Run" row
-            run_row = tk.Frame(body, bg=t["bg"])
-            run_row.pack(fill='x', pady=1, padx=(18, 0))
-
-            run_lbl = tk.Label(run_row, text="▶  Run", bg=t["bg"], fg=t["fg"],
-                               font=('', 9), anchor='w', cursor="hand2", padx=4)
-            run_lbl.pack(side='left')
-            run_lbl.bind("<Button-1>",
-                         lambda e, fn=run_fn, jn=label:
-                         self._inject_and_run(fn, None, jn))
-            run_lbl.bind("<Enter>",
-                         lambda e, b=run_lbl: b.configure(bg=self._theme()["hover"]))
-            run_lbl.bind("<Leave>",
-                         lambda e, b=run_lbl: b.configure(bg=self._theme()["bg"]))
+            for w in (hdr_f, hdr_lbl):
+                w.bind("<Button-1>", lambda e, fn=run_fn, jn=label:
+                       self._inject_and_run(fn, None, jn))
+                w.bind("<Enter>", lambda e: hdr_lbl.configure(bg=self._theme()["hover"]))
+                w.bind("<Leave>", lambda e: hdr_lbl.configure(bg=self._theme()["bg"]))
+            # Remove arrow prefix — no expand behaviour
+            hdr_lbl.configure(text=label)
         else:
+            for w in (hdr_f, hdr_lbl):
+                w.bind("<Button-1>", lambda e, fn=set_open: fn())
+                w.bind("<Enter>", lambda e: hdr_lbl.configure(bg=self._theme()["hover"]))
+                w.bind("<Leave>", lambda e: hdr_lbl.configure(bg=self._theme()["bg"]))
+
+        # ── body contents (only for tools with sub-options) ───────────────────
+        if options:
             for opt in options:
                 opt_label = self.OPTION_LABELS.get(opt, opt)
                 row = tk.Frame(body, bg=t["bg"])
