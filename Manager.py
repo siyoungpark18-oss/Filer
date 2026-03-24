@@ -246,6 +246,23 @@ def _get_log_section_fns():
     return lambda header: None, lambda: None
 
 
+def _get_working_folders(src):
+    """
+    Returns the list of folders to operate on.
+    If Input contains exactly one folder (the common wrapper pattern),
+    operate on that folder's subfolders instead.
+    """
+    top = sorted([f for f in src.iterdir() if f.is_dir()],
+                 key=lambda x: natural_sort_key(x.name))
+    if len(top) == 1:
+        sub = sorted([f for f in top[0].iterdir() if f.is_dir()],
+                     key=lambda x: natural_sort_key(x.name))
+        if sub:
+            print(f"  Found 1 top-level folder '{top[0].name}' — operating on its {len(sub)} subfolder(s).")
+            return sub, top[0]
+    return top, src
+
+
 def folders_to_pdf(config, cancel=None):
     src = get_input(config)
     src.mkdir(parents=True, exist_ok=True)
@@ -442,8 +459,8 @@ def folder_renamer(config, cancel=None):
     if not _check_disk_space(out, config):
         return
 
-    folders = sorted([f for f in src.iterdir() if f.is_dir()],
-                     key=lambda x: natural_sort_key(x.name))
+    # If input has a single wrapper folder, operate on its children
+    folders, work_root = _get_working_folders(src)
 
     if not folders:
         print("  No folders found in Input!")
@@ -505,7 +522,8 @@ def folder_renamer(config, cancel=None):
                 else:
                     skipped.append((sub, "no number found"))
                     collect(sub, dest_parent / sub.name)
-        collect(src, out)
+        # For extract number, recurse from work_root directly
+        collect(work_root, out)
 
     else:
         print("  Invalid mode.")
