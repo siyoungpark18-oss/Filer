@@ -892,7 +892,7 @@ Example of Workflow
         print("Input cleared.")
 
     def _show_preferences(self):
-        t = self._theme()
+        t = THEMES["light"]
         win = tk.Toplevel(self.root)
         win.title("Preferences")
         win.resizable(True, True)
