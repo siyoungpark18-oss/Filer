@@ -950,7 +950,7 @@ Example of Workflow
         # Bordered label — same width=22 as classic buttons
         hdr_f = tk.Frame(hdr_row, bg=t["fg"], padx=1, pady=1)
         hdr_lbl = tk.Label(hdr_f, text=label, bg=t["bg"], fg=t["fg"],
-                           font=('', 10), width=22, cursor="hand2", anchor='w')
+                           font=('', 10), width=22, cursor="hand2")
         # prepend arrow inside the label text dynamically
         hdr_lbl.pack()
         hdr_f.pack(side='left')
