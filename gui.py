@@ -30,9 +30,9 @@ THEMES = {
         "btn_fg":    "#000000",
         "hint_fg":   "gray",
         "hover":     "#d0d0d0",
-        "log_error":   "#cc0000",
-        "log_warn":    "#b86000",
-        "log_success": "#007700",
+        "log_error":   "#bd7e7e",
+        "log_warn":    "#c59b79",
+        "log_success": "#6cab72",
         "log_dim":     "#999999",
     },
     "dark": {
@@ -48,7 +48,7 @@ THEMES = {
         "hover":     "#4e4e4e",
         "log_error":   "#f44747",
         "log_warn":    "#ce9178",
-        "log_success": "#4ec94e",
+        "log_success": "#6cab72",
         "log_dim":     "#666666",
     },
 }
@@ -200,7 +200,7 @@ TOOL_LABELS = {
 class App:
     def __init__(self, root):
         self.root = root
-        self.root.title("Filer")
+        self.root.title("Tankobon")
         self.root.resizable(True, True)
         self.config = load_config()
         self.cancel_event = threading.Event()
@@ -464,9 +464,9 @@ class App:
                                          padx=10, pady=10)
         text.pack(fill='both', expand=True)
 
-        help_text = """Filer.
+        help_text = """Tankobon.
 
-Filer is a file manager.
+Tankobon is a file manager.
 To be more specific, it's specialized for image management en masse. It's meant to manage, convert, and compress folders with images or individual images in the thousands at a time and to do this with speed.
 
 And with this comes its true Niche or intended use. Ultimately, Filer is a companion to large scale Manga Piracy. To those who wish to own and obtain manga from third party sources you may find that a multitude of reasons can impede time-efficient management of what could be thousands of manga pages, each stored as an individual image.
@@ -589,11 +589,11 @@ Example of Workflow
             text.tag_bind(tag, "<Leave>", lambda e: text.configure(cursor=""))
 
         text.configure(state='normal')
-        text.insert(tk.END, "Filer\n\n")
+        text.insert(tk.END, "Tankobon\n\n")
         text.insert(tk.END,
-                    "Filer is a file manager. It's an open source project that specializes in managing image files in bulk.\n\n")
+                    "Tankobon is a file manager. It's an open source project that specializes in managing image files in bulk. Its under the AGPL license\n\n")
         text.insert(tk.END, "Github:\n")
-        insert_link("https://github.com/siyoungpark18-oss/Filer?tab=AGPL-3.0-1-ov-file")
+        insert_link("https://github.com/siyoungpark18-oss/Tankobon")
         text.insert(tk.END, "\n\nMacOS .dmg:\n")
         insert_link("https://drive.google.com/drive/u/2/folders/1gjRlr2hV7RjLBTGlGs2SqQgKNaW4T0Il")
         text.insert(tk.END, "\n\nPrevious versions:\n")
@@ -612,7 +612,7 @@ Example of Workflow
 
         title_row = tk.Frame(left)
         title_row.pack(fill='x', pady=(0, 2))
-        tk.Label(title_row, text="Filer", font=('', 11, 'bold')).pack(side='left')
+        tk.Label(title_row, text="Tankobon", font=('', 11, 'bold')).pack(side='left')
 
         def _mini_btn(parent, text_or_var, cmd, side='right', tooltip=None):
             t = self._theme()
@@ -950,7 +950,7 @@ Example of Workflow
         # Bordered label — same width=22 as classic buttons
         hdr_f = tk.Frame(hdr_row, bg=t["fg"], padx=1, pady=1)
         hdr_lbl = tk.Label(hdr_f, text=label, bg=t["bg"], fg=t["fg"],
-                           font=('', 10), width=22, cursor="hand2", anchor='w')
+                           font=('', 10), width=22, cursor="hand2")
         # prepend arrow inside the label text dynamically
         hdr_lbl.pack()
         hdr_f.pack(side='left')
