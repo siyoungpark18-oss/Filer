@@ -65,7 +65,6 @@ class LogRedirect(io.TextIOBase):
         self._active_section = None
 
     def start_section(self, header):
-        # Clear any unclosed previous section so its hide_tag doesn't bleed
         self._active_section = None
 
         tag = f"section_{id(header)}_{self.log.index(tk.END)}"
@@ -76,7 +75,6 @@ class LogRedirect(io.TextIOBase):
         arrow = "▲" if expanded else "▼"
         line = f"{arrow} {header}\n"
 
-        # Use log_fg so the header always matches normal log text color
         self.log.tag_configure(tag, foreground=self.app._theme()["log_fg"])
         self.log.insert(tk.END, line, (tag,))
         self.log.tag_configure(hide_tag, elide=not expanded)
@@ -208,7 +206,7 @@ class App:
         self._open_accordion = {}
         self._dark = self.config.get("dark_mode", False)
         self._btn_labels = {}
-        self._suboption_labels = {}  # tool_label -> [opt_lbl widgets]
+        self._suboption_labels = {}
         self._last_input_count = -1
         patch_input()
         self._build_ui()
@@ -218,10 +216,6 @@ class App:
         self._poll_input()
         self._status_running = False
 
-    # ── tool option definitions ───────────────────────────────────────────────
-    # Maps tool label → list of option keys.
-    # Each option key maps to a (config_key, config_value) pair that will be
-    # temporarily injected so Manager functions don't prompt again.
     TOOL_OPTIONS = {
         "Folders to PDF":     ["combine", "individual"],
         "Images to PDF":      [],
@@ -233,9 +227,9 @@ class App:
         "PDF Combiner":       [],
         "PDF Splitter":       [],
         "PDF to Images":      ["jpg", "png"],
+        "Add Input":          ["files", "folder"],
     }
 
-    # Maps tool label → the config key that controls its mode
     TOOL_MODE_CONFIG_KEY = {
         "Folders to PDF":  "default_folders_to_pdf_mode",
         "Folder Renamer":  "default_folder_renamer_mode",
@@ -260,6 +254,8 @@ class App:
         "tiff":           "TIFF",
         "keep one copy":  "Keep one copy",
         "delete all":     "Delete all instances",
+        "files":          "Files",
+        "folder":         "Individual Folder",
     }
 
     def _theme(self):
@@ -367,7 +363,6 @@ class App:
             except tk.TclError:
                 pass
 
-        # Dim accordion sub-option labels to match their parent tool button
         for tool_label, opt_lbls in self._suboption_labels.items():
             color = t["hint_fg"] if empty else t["fg"]
             for lbl in opt_lbls:
@@ -469,7 +464,7 @@ class App:
 Tankobon is a file manager.
 To be more specific, it's specialized for image management en masse. It's meant to manage, convert, and compress folders with images or individual images in the thousands at a time and to do this with speed.
 
-And with this comes its true Niche or intended use. Ultimately, Filer is a companion to large scale Manga Piracy. To those who wish to own and obtain manga from third party sources you may find that a multitude of reasons can impede time-efficient management of what could be thousands of manga pages, each stored as an individual image.
+And with this comes its true Niche or intended use. Ultimately, Tankobon is a companion to large scale Manga Piracy. To those who wish to own and obtain manga from third party sources you may find that a multitude of reasons can impede time-efficient management of what could be thousands of manga pages, each stored as an individual image.
 
 Following is the explanation of the use cases for each tool within this Niche. I hope it's useful in these areas at the very least.
 
@@ -805,7 +800,6 @@ Example of Workflow
                  bg=t["btn_bg"], fg=t["fg"], padx=6, pady=4).pack()
 
     def _make_button(self, parent, text, cmd, tooltip=None):
-        """Standard flat button matching old UI dimensions (width=22)."""
         t = self._theme()
         row = tk.Frame(parent, bg=t["bg"])
         row.pack(pady=2, fill='x')
@@ -849,10 +843,6 @@ Example of Workflow
         self._update_button_states()
 
     def _build_classic_buttons(self):
-        """
-        Original flat-button sidebar.
-        Order: tool sections (Folder, File) on top; Input and Utility below.
-        """
         from collections import OrderedDict
         toggleable_sections = OrderedDict()
         for key, section, label, method in self.TOGGLEABLE:
@@ -875,7 +865,6 @@ Example of Workflow
             ]),
         ]
 
-        # Tools first, then fixed
         all_sections = list(toggleable_sections.items()) + fixed_sections
 
         for section_label, cmds in all_sections:
@@ -886,11 +875,6 @@ Example of Workflow
                                   tooltip=self.TOOLTIPS.get(label))
 
     def _build_dropdown_buttons(self):
-        """
-        Accordion sidebar.
-        Order: tool sections (Folder, File) on top; Input and Utility below.
-        Button dimensions match the classic flat style (width=22).
-        """
         t = self._theme()
 
         from collections import OrderedDict
@@ -900,7 +884,7 @@ Example of Workflow
                 tool_rows.setdefault(section, []).append(
                     (label, getattr(self, method)))
 
-        # ── tool accordion sections (top) ─────────────────────────────────────
+        # ── tool accordion sections ───────────────────────────────────────────
         for section_label, items in tool_rows.items():
             tk.Label(self._btn_frame, text=section_label,
                      font=('', 10, 'bold'), bg=t["bg"], fg=t["fg"]
@@ -908,54 +892,43 @@ Example of Workflow
             for label, run_fn in items:
                 self._make_tool_accordion(self._btn_frame, label, run_fn)
 
-        # ── fixed sections: Input + Utility (bottom) ──────────────────────────
-        for section_label, cmds in [
-            ("Input", [
-                ("Add Input",    self.pick_files),
-                ("Clear Input",  self.clear_input),
-                ("Open Input",   self.open_input),
-            ]),
-            ("Utility", [
-                ("Status",       self.run_status),
-                ("Clear Log",    self.clear_log),
-                ("Open Output",  self.open_output),
-                ("Clear Output", self.clear_output),
-                ("Cancel Job",   self.cancel_job),
-            ]),
+        # ── Input section ─────────────────────────────────────────────────────
+        tk.Label(self._btn_frame, text="Input",
+                 font=('', 10, 'bold'), bg=t["bg"], fg=t["fg"]
+                 ).pack(anchor='w', pady=(8, 2))
+        self._make_tool_accordion(self._btn_frame, "Add Input", self.pick_files)
+        for label, cmd in [("Clear Input", self.clear_input), ("Open Input", self.open_input)]:
+            self._make_button(self._btn_frame, label, cmd, tooltip=self.TOOLTIPS.get(label))
+
+        # ── Utility section ───────────────────────────────────────────────────
+        tk.Label(self._btn_frame, text="Utility",
+                 font=('', 10, 'bold'), bg=t["bg"], fg=t["fg"]
+                 ).pack(anchor='w', pady=(8, 2))
+        for label, cmd in [
+            ("Status",       self.run_status),
+            ("Clear Log",    self.clear_log),
+            ("Open Output",  self.open_output),
+            ("Clear Output", self.clear_output),
+            ("Cancel Job",   self.cancel_job),
         ]:
-            tk.Label(self._btn_frame, text=section_label,
-                     font=('', 10, 'bold'), bg=t["bg"], fg=t["fg"]
-                     ).pack(anchor='w', pady=(8, 2))
-            for label, cmd in cmds:
-                self._make_button(self._btn_frame, label, cmd,
-                                  tooltip=self.TOOLTIPS.get(label))
+            self._make_button(self._btn_frame, label, cmd, tooltip=self.TOOLTIPS.get(label))
 
     def _make_tool_accordion(self, parent, label, run_fn):
-        """
-        One collapsible tool row.  The header button matches classic width=22.
-        Sub-option rows sit indented beneath it when expanded.
-        """
         t = self._theme()
         options = self.TOOL_OPTIONS.get(label, [])
 
         outer = tk.Frame(parent, bg=t["bg"])
         outer.pack(fill='x', pady=1)
 
-        # ── header row ────────────────────────────────────────────────────────
         hdr_row = tk.Frame(outer, bg=t["bg"])
         hdr_row.pack(fill='x')
 
-        arrow_var = tk.StringVar(value="▶")
-
-        # Bordered label — same width=22 as classic buttons
         hdr_f = tk.Frame(hdr_row, bg=t["fg"], padx=1, pady=1)
         hdr_lbl = tk.Label(hdr_f, text=label, bg=t["bg"], fg=t["fg"],
                            font=('', 10), width=22, cursor="hand2")
-        # prepend arrow inside the label text dynamically
         hdr_lbl.pack()
         hdr_f.pack(side='left')
 
-        # register so dimming/state tracking works
         self._btn_labels[label] = hdr_lbl
 
         if self.config.get("show_tooltips", True) and label in self.TOOLTIPS:
@@ -966,7 +939,6 @@ Example of Workflow
             info.bind("<Leave>", lambda e: info.configure(bg=self._theme()["bg"]))
             self._show_tooltip(info, self.TOOLTIPS[label])
 
-        # ── expand/collapse body ──────────────────────────────────────────────
         body = tk.Frame(outer, bg=t["bg"])
         state = {"open": False}
 
@@ -980,7 +952,6 @@ Example of Workflow
             for lbl_key, info in self._open_accordion.items():
                 if lbl_key != label and info["open"]:
                     info["close"]()
-
             if state["open"]:
                 body.pack_forget()
                 _update_label(False)
@@ -999,24 +970,42 @@ Example of Workflow
 
         self._open_accordion[label] = {"open": False, "close": close_fn}
 
-        # Tools with no sub-options: clicking the header runs directly.
-        # Tools with sub-options: clicking the header toggles expand/collapse.
-        if not options:
+        # Check if a default is configured — if so, act like a direct-run button
+        config_key = self.TOOL_MODE_CONFIG_KEY.get(label)
+        has_default = (
+            config_key is not None
+            and self.config.get(config_key, "ask") != "ask"
+        )
+
+        if not options or has_default:
+            # Direct-run: clicking header or ▶ runs the tool immediately
             for w in (hdr_f, hdr_lbl):
                 w.bind("<Button-1>", lambda e, fn=run_fn, jn=label:
                        self._inject_and_run(fn, None, jn))
                 w.bind("<Enter>", lambda e: hdr_lbl.configure(bg=self._theme()["hover"]))
                 w.bind("<Leave>", lambda e: hdr_lbl.configure(bg=self._theme()["bg"]))
-            # Remove arrow prefix — no expand behaviour
             hdr_lbl.configure(text=label)
+
+            # ▶ run button on the right
+            rbf = tk.Frame(hdr_row, bg=t["fg"], padx=1, pady=1)
+            rbl = tk.Label(rbf, text="▶", bg=t["bg"], fg=t["fg"],
+                           font=('', 9), padx=5, cursor="hand2")
+            rbl.pack()
+            rbf.pack(side='right', padx=(4, 2))
+            rbl.bind("<Button-1>", lambda e, fn=run_fn, jn=label:
+                     self._inject_and_run(fn, None, jn))
+            rbl.bind("<Enter>", lambda e, b=rbl: b.configure(bg=self._theme()["hover"]))
+            rbl.bind("<Leave>", lambda e, b=rbl: b.configure(bg=self._theme()["bg"]))
+
         else:
+            # Expandable: clicking header toggles sub-options
             for w in (hdr_f, hdr_lbl):
                 w.bind("<Button-1>", lambda e, fn=set_open: fn())
                 w.bind("<Enter>", lambda e: hdr_lbl.configure(bg=self._theme()["hover"]))
                 w.bind("<Leave>", lambda e: hdr_lbl.configure(bg=self._theme()["bg"]))
 
-        # ── body contents (only for tools with sub-options) ───────────────────
-        if options:
+        # ── sub-option rows (only shown when expanded, and only if not defaulted) ──
+        if options and not has_default:
             for opt in options:
                 opt_label = self.OPTION_LABELS.get(opt, opt)
                 row = tk.Frame(body, bg=t["bg"])
@@ -1045,8 +1034,6 @@ Example of Workflow
                 opt_lbl.bind("<Leave>",
                              lambda e, b=opt_lbl: b.configure(bg=self._theme()["bg"]))
 
-    # Direct Manager function lambdas — used by accordion so we never
-    # double-nest _run (run_X methods call _run internally).
     @property
     def _tool_fns(self):
         return {
@@ -1060,20 +1047,18 @@ Example of Workflow
             "PDF Combiner":       lambda: pdf_combiner(self.config, self.cancel_event),
             "PDF Splitter":       lambda: pdf_splitter(self.config, self.cancel_event),
             "PDF to Images":      lambda: pdf_to_images(self.config, self.cancel_event),
+            "Add Input":          lambda: self.pick_files(),
         }
 
     def _inject_and_run(self, run_fn, choice, job_name):
-        """
-        Called when an accordion option button is clicked.
-        Temporarily overrides the relevant config key so the Manager function
-        won't prompt for mode again, then calls _run directly with the Manager
-        function (bypassing the run_X wrapper methods to avoid double _run).
-        """
-        # Always use the direct Manager lambda to avoid nested _run calls
         direct_fn = self._tool_fns.get(job_name)
         if direct_fn is None:
-            # Fallback for tools with no options (shouldn't happen in practice)
             self._run(run_fn, job_name=job_name)
+            return
+
+        # Special case: Add Input routes choice directly to pick_files
+        if job_name == "Add Input":
+            self._run(lambda c=choice: self.pick_files(c), job_name=job_name)
             return
 
         config_key = self.TOOL_MODE_CONFIG_KEY.get(job_name) if choice is not None else None
@@ -1082,7 +1067,7 @@ Example of Workflow
             original = self.config.get(config_key)
             self.config[config_key] = choice
 
-            fn_snapshot = self._tool_fns[job_name]  # capture after override
+            fn_snapshot = self._tool_fns[job_name]
 
             def run_with_restore():
                 try:
@@ -1415,7 +1400,7 @@ Example of Workflow
 
         show_tab("Paths")
 
-    def pick_files(self):
+    def pick_files(self, choice=None):
         if not self.config.get("input", ""):
             print("  Input folder is not configured. Set it in Preferences (≡).")
             return
@@ -1424,24 +1409,33 @@ Example of Workflow
         input_dir.mkdir(parents=True, exist_ok=True)
         dialog_result = queue.Queue()
 
-        def open_dialog(choice):
-            if choice == "FILES":
+        def open_dialog(c):
+            if c == "files":
                 paths = filedialog.askopenfilenames(title="Select files to add to Input")
                 dialog_result.put(list(paths))
-            elif choice == "FOLDER":
+            elif c == "folder":
                 folder = filedialog.askdirectory(title="Select a folder to add to Input")
                 dialog_result.put([folder] if folder else [])
             else:
                 dialog_result.put([])
 
         def run():
-            print("Add to Input")
-            print("  Enter = Files   Space = Folder   Escape = Cancel")
-            choice = thread_safe_input("Waiting for key...").strip()
-            if choice not in ("FILES", "FOLDER"):
-                print("  Cancelled.")
-                return
-            self.root.after(0, lambda: open_dialog(choice))
+            if choice is None:
+                # Classic mode — key-press flow
+                print("Add to Input")
+                print("  Enter = Files   Space = Folder   Escape = Cancel")
+                raw = thread_safe_input("Waiting for key...").strip()
+                if raw == "FILES":
+                    c = "files"
+                elif raw == "FOLDER":
+                    c = "folder"
+                else:
+                    print("  Cancelled.")
+                    return
+            else:
+                c = choice
+
+            self.root.after(0, lambda: open_dialog(c))
             paths = dialog_result.get()
             if not paths:
                 print("  Nothing selected.")
@@ -1462,7 +1456,7 @@ Example of Workflow
                     fail += 1
             print(f"  Done! {ok} added{f', {fail} failed' if fail else ''} → {input_dir}")
 
-        self._run(run)
+        self._run(run, job_name="Add Input")
 
     def run_folders_to_pdf(self):
         self._run(lambda: folders_to_pdf(self.config, self.cancel_event), job_name="Folders to PDF")
