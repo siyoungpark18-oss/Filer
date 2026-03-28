@@ -37,6 +37,8 @@ DEFAULTS = {
     "min_free_gb":              2,
     "log_default_expanded":     False,
     "ask_run_name":             True,
+    "show_timestamps":          True,
+
 }
 
 #FUNCTIONS——————————————————————————————————————————————————————————————————————————————————————————————————
