@@ -1086,7 +1086,7 @@ Example of Workflow
                 return
         self.cancel_event.clear()
 
-        if job_name != "Add Input":
+        if job_name != "Add Input" and self.config.get("show_timestamps", True):
             from datetime import datetime
             font_size = self._log_font_size
             line_len = max(10, int(55 - (font_size - 7) * 2.5))
@@ -1289,6 +1289,7 @@ Example of Workflow
             ("guide_empty_input",      "Dim Tools when Input Empty",         "check", None),
             ("show_tooltips",          "Show Tooltip Hints",                 "check", None),
             ("log_default_expanded",   "Log Sections Expanded by Default",   "check", None),
+            ("show_timestamps", "Show Timestamps in Log",                    "check", None),
             ("min_free_gb",            "Min Free Space to Start (GB)",       "combo", ["0","1","2","3","5","10"]),
         ]
 
@@ -1372,7 +1373,7 @@ Example of Workflow
                 val = v.get()
                 if key in ("auto_clear_input", "replace_output", "sort_output",
                            "guide_empty_input", "show_tooltips", "allow_concurrent_jobs",
-                           "log_default_expanded"):
+                           "log_default_expanded", "show_timestamps"):
                     self.config[key] = bool(val)
                 elif key in ("throttle_cpu", "throttle_mem"):
                     self.config[key] = int(str(val).split()[0])
