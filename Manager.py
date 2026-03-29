@@ -927,10 +927,11 @@ def find_duplicates(config, cancel=None):
         return
 
     print(f"  Found {len(duplicates)} duplicate(s) out of {len(all_files)} images:")
-    for dup in sorted(duplicates)[:10]:
+    start_section, end_section = _get_log_section_fns()
+    start_section(f"  Duplicates found ({len(duplicates)})")
+    for dup in sorted(duplicates, key=lambda x: natural_sort_key(x.name)):
         print(f"    {dup.name}")
-    if len(duplicates) > 10:
-        print(f"    ... and {len(duplicates) - 10} more")
+    end_section()
 
     mode = config.get("default_dedupe_mode", "ask")
     if mode == "ask":
@@ -1090,7 +1091,7 @@ def pdf_to_images(config, cancel=None):
 
     dpi = config.get("default_dpi", "ask")
     if dpi == "ask":
-        raw = input("DPI (default 150): ").strip()
+        raw = input("DPI (default 72): ").strip()
         if raw == SENTINEL:
             return _cancel()
         dpi = int(raw) if raw else 72
