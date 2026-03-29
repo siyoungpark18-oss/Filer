@@ -1310,7 +1310,7 @@ class App:
 
         tools_fields = [
             ("default_folders_to_pdf_mode", "Folders to PDF: Default Mode",   "combo", ["ask", "combine", "individual"]),
-            ("default_sort",               "Default Sort Mode",               "combo", ["ask","natural","none"]),
+            ("default_sort",               "Default Sort Mode",               "combo", ["natural", "none"]),
             ("default_folder_renamer_mode", "Folder Renamer: Default Mode",   "combo", ["ask", "prefix", "suffix", "replace", "extract number"]),
             ("default_file_renamer_mode",  "File Renamer: Default Mode",      "combo", ["ask", "prefix", "suffix", "replace", "sequence"]),
             ("default_img_fmt",            "Default Image Format",            "combo", ["ask", "jpg", "png", "webp", "bmp", "tiff"]),
@@ -1340,7 +1340,9 @@ class App:
                     v = tk.BooleanVar(value=bool(self.config.get(key, default)))
                     tk.Checkbutton(page, variable=v, bg=t["bg"]).grid(row=row, column=1, sticky='w')
                 else:
-                    v = tk.StringVar(value=str(self.config.get(key, opts[0])))
+                    raw_val = str(self.config.get(key, opts[0]))
+                    val = raw_val if raw_val in opts else opts[0]
+                    v = tk.StringVar(value=val)
                     ttk.Combobox(page, textvariable=v, values=opts,
                                  state='readonly', width=16).grid(row=row, column=1, sticky='w')
                 vars_[key] = v
@@ -1396,6 +1398,8 @@ class App:
                     self.config[key] = val if val == "ask" else int(val)
                 elif key == "min_free_gb":
                     self.config[key] = int(str(val).split()[0])
+                elif key == "default_sort":
+                    self.config[key] = val if val in ("natural", "none") else "natural"
                 else:
                     self.config[key] = val
             for key, v in btn_vars.items():
