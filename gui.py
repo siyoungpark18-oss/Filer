@@ -1084,6 +1084,9 @@ Example of Workflow
             if not self.config.get("allow_concurrent_jobs", False):
                 print("  A job is already running. Wait for it to finish or cancel it first.")
                 return
+            if job_name in self._running_jobs:
+                print(f"  {job_name} is already running.")
+                return
         self.cancel_event.clear()
 
         if job_name != "Add Input" and self.config.get("show_timestamps", True):
