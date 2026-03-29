@@ -1093,7 +1093,7 @@ def pdf_to_images(config, cancel=None):
         raw = input("DPI (default 150): ").strip()
         if raw == SENTINEL:
             return _cancel()
-        dpi = int(raw) if raw else 150
+        dpi = int(raw) if raw else 72
     else:
         print(f"  DPI: {dpi}")
 
