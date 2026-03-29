@@ -288,7 +288,6 @@ def folders_to_pdf(config, cancel=None):
     print(f"  Mode: {mode}")
     print(f"  Note: cannot be cancelled once PDF conversion starts.")
 
-    image_extensions = IMAGE_EXTENSIONS
     folders = sorted([f for f in src.iterdir() if f.is_dir()],
                      key=lambda x: natural_sort_key(x.name))
 
@@ -311,7 +310,7 @@ def folders_to_pdf(config, cancel=None):
                 return
             throttle_if_needed(config)
             start_section(f"[{folder.name}]")
-            paths, skipped = collect_image_paths(folder, image_extensions, sub_print=print)
+            paths, skipped = collect_image_paths(folder, IMAGE_EXTENSIONS, sub_print=print)
             end_section()
             all_paths.extend(paths)
             all_skipped.extend(skipped)
@@ -362,7 +361,7 @@ def folders_to_pdf(config, cancel=None):
                 return
             throttle_if_needed(config)
             start_section(f"[{unit.name}]")
-            paths, skipped = collect_image_paths(unit, image_extensions, sub_print=print)
+            paths, skipped = collect_image_paths(unit, IMAGE_EXTENSIONS, sub_print=print)
             end_section()
             total_skipped.extend(skipped)
             print(f"  [{unit.name}]  {len(paths)} image(s)"
@@ -403,14 +402,13 @@ def images_to_pdf(config, cancel=None):
         return
     print(f"  Note: cannot be cancelled once PDF conversion starts.")
 
-    image_extensions = IMAGE_EXTENSIONS
     all_files = list(src.rglob("*"))
     image_files = []
     skipped = []
     for f in all_files:
         if not f.is_file():
             continue
-        if f.suffix.lower() in image_extensions:
+        if f.suffix.lower() in IMAGE_EXTENSIONS:
             image_files.append(f)
         else:
             skipped.append((f, "unsupported type"))
@@ -695,7 +693,6 @@ def combine_image_sets(config, cancel=None):
     if not _check_disk_space(out, config):
         return
 
-    image_extensions = IMAGE_EXTENSIONS
     sort_result = resolve_sort(config)
     if sort_result is None:
         return _cancel()
@@ -707,7 +704,7 @@ def combine_image_sets(config, cancel=None):
         skipped = []
         for item in all_items:
             if item.is_file():
-                if item.suffix.lower() in image_extensions:
+                if item.suffix.lower() in IMAGE_EXTENSIONS:
                     images.append(item)
                 else:
                     skipped.append((item, "unsupported type"))
