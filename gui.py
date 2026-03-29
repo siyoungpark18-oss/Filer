@@ -376,7 +376,7 @@ class App:
                 pass
 
         for tool_label, opt_lbls in self._suboption_labels.items():
-            color = t["hint_fg"] if empty else t["fg"]
+            color = t["hint_fg"] if (empty and tool_label != "Add Input") else t["fg"]
             for lbl in opt_lbls:
                 try:
                     lbl.configure(fg=color)
