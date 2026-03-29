@@ -33,7 +33,7 @@ THEMES = {
         "log_error":   "#bd7e7e",
         "log_warn":    "#c59b79",
         "log_success": "#6cab72",
-        "log_dim":     "#999999",
+        "log_dim":     "#666666",
     },
     "dark": {
         "bg":        "#1e1e1e",
@@ -49,7 +49,7 @@ THEMES = {
         "log_error":   "#f44747",
         "log_warn":    "#ce9178",
         "log_success": "#6cab72",
-        "log_dim":     "#666666",
+        "log_dim":     "#999999",
     },
 }
 
