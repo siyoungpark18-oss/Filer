@@ -723,6 +723,8 @@ def combine_image_sets(config, cancel=None):
     total_skipped = []
     total_failed = []
 
+    start_section, end_section = _get_log_section_fns()
+
     for folder in folders:
         if cancel and cancel.is_set():
             print(f"  Cancelled. ({counter - 1} images combined so far)")
@@ -731,7 +733,9 @@ def combine_image_sets(config, cancel=None):
         throttle_if_needed(config)
         subfolders = sorted([f for f in folder.iterdir() if f.is_dir()],
                             key=lambda x: natural_sort_key(x.name))
-        targets = [(f"{folder.name}/{sub.name}", sub) for sub in subfolders] if subfolders else [(folder.name, folder)]
+        targets = [(f"{sub.name}", sub) for sub in subfolders] if subfolders else [(folder.name, folder)]
+
+        start_section(f"[{folder.name}]")
         for label, target in targets:
             images, skipped = collect_images(target)
             total_skipped.extend(skipped)
@@ -743,6 +747,7 @@ def combine_image_sets(config, cancel=None):
                     counter += 1
                 except OSError as e:
                     if _is_no_space(e):
+                        end_section()
                         print(f"  ✖ Disk full after {counter - 1} image(s). Stopping.")
                         _print_summary(copied=counter - 1, failed=total_failed if total_failed else None,
                                        skipped=total_skipped if total_skipped else None, label="combined")
@@ -751,7 +756,8 @@ def combine_image_sets(config, cancel=None):
                     total_failed.append((img, str(e)))
                 except Exception as e:
                     total_failed.append((img, str(e)))
-            print(f"  [{label}]  {len(images)} image(s)  →  {str(start_idx).zfill(4)}–{str(counter - 1).zfill(4)}")
+            print(f"    [{label}]  {len(images)} image(s)  →  {str(start_idx).zfill(4)}–{str(counter - 1).zfill(4)}")
+        end_section()
 
     _print_summary(copied=counter - 1, failed=total_failed if total_failed else None,
                    skipped=total_skipped if total_skipped else None, label="combined")
