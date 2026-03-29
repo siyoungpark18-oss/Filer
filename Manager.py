@@ -887,14 +887,13 @@ def find_duplicates(config, cancel=None):
     if not _check_disk_space(out, config):
         return
 
-    image_extensions = IMAGE_EXTENSIONS
     all_files_raw = list(src.rglob("*"))
     all_files = []
     skipped = []
     for f in all_files_raw:
         if not f.is_file():
             continue
-        if f.suffix.lower() in image_extensions:
+        if f.suffix.lower() in IMAGE_EXTENSIONS:
             all_files.append(f)
         else:
             skipped.append((f, "unsupported type"))
