@@ -227,7 +227,7 @@ class App:
         "PDF Combiner":       [],
         "PDF Splitter":       [],
         "PDF to Images":      ["jpg", "png"],
-        "Add Input":          ["files", "folder"],
+        "Add Input":          ["files", "folder", "output"],
     }
 
     TOOL_MODE_CONFIG_KEY = {
@@ -256,6 +256,7 @@ class App:
         "delete all":     "Delete all instances",
         "files":          "Files",
         "folder":         "Individual Folder",
+        "output":         "From Output",
     }
 
     def _theme(self):
@@ -1434,6 +1435,12 @@ class App:
             elif c == "folder":
                 folder = filedialog.askdirectory(title="Select a folder to add to Input")
                 dialog_result.put([folder] if folder else [])
+            elif c == "output":
+                out_dir = Path(self.config.get("output", "")) / "output"
+                if out_dir.exists():
+                    dialog_result.put([str(f) for f in out_dir.iterdir()])
+                else:
+                    dialog_result.put([])
             else:
                 dialog_result.put([])
 
