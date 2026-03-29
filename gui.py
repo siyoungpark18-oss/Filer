@@ -1324,8 +1324,7 @@ Example of Workflow
                 tk.Label(page, text=label, anchor='w', bg=t["bg"]).grid(
                     row=row, column=0, sticky='w', pady=4, padx=(0, 16))
                 if typ == "check":
-                    default = True if key in ("guide_empty_input", "show_tooltips") else False
-                    v = tk.BooleanVar(value=bool(self.config.get(key, default)))
+                    v = tk.BooleanVar(value=bool(self.config.get(key, DEFAULTS.get(key, False))))
                     tk.Checkbutton(page, variable=v, bg=t["bg"]).grid(row=row, column=1, sticky='w')
                 else:
                     v = tk.StringVar(value=str(self.config.get(key, opts[0])))
