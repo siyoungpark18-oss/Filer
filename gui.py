@@ -272,7 +272,7 @@ class App:
         for tag in self.log.tag_names():
             if tag.startswith("section_"):
                 self.log.tag_configure(tag, foreground=t["log_fg"])
-            elif tag.startswith("log_dim"):
+            elif tag in ("ts_dim",) or tag.startswith("log_dim"):
                 self.log.tag_configure(tag, foreground=t["log_dim"])
             elif tag.startswith("log_error"):
                 self.log.tag_configure(tag, foreground=t["log_error"])
