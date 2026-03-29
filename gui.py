@@ -8,6 +8,7 @@ import sys
 import io
 import shutil
 import webbrowser
+import re as re
 
 #IMPORT FROM MANAGER——————————————————————————————————————————————————————————————————————————————————————
 from Manager import (
@@ -28,7 +29,7 @@ THEMES = {
         "entry_fg":  "#000000",
         "btn_bg":    "#e0e0e0",
         "btn_fg":    "#000000",
-        "hint_fg":   "gray",
+        "hint_fg":   "#808080",
         "hover":     "#d0d0d0",
         "log_error":   "#bd7e7e",
         "log_warn":    "#c59b79",
@@ -260,7 +261,10 @@ class App:
     }
 
     def _theme(self):
-        return THEMES["dark"] if self._dark else THEMES["light"]
+        base = "dark" if self._dark else "light"
+        hardcoded = THEMES[base]
+        custom = self.config.get("themes", {}).get(base, {})
+        return {**hardcoded, **custom}
 
     def _apply_theme(self):
         t = self._theme()
@@ -1189,7 +1193,7 @@ class App:
         content_area.pack(side='left', fill='both', expand=True)
 
         pages = {}
-        for name in ("Paths", "General", "Tools", "Hotkeys", "Throttle", "Buttons"):
+        for name in ("Paths", "General", "Tools", "Hotkeys", "Throttle", "Buttons", "Themes"):
             f = tk.Frame(content_area, bg=t["bg"], padx=16, pady=12)
             f.grid(row=0, column=0, sticky='nsew')
             pages[name] = f
@@ -1375,6 +1379,8 @@ class App:
             btn_vars[key] = v
 
         def save():
+            if not _save_themes():
+                return
             for key in ("input", "output"):
                 val = paths[key].get().strip()
                 if val and Path(val).exists():
@@ -1414,7 +1420,73 @@ class App:
             lbl.bind("<Enter>", lambda e, l=lbl: l.configure(bg=t["hover"]))
             lbl.bind("<Leave>", lambda e, l=lbl: l.configure(bg=t["btn_bg"]))
 
-        show_tab("Paths")
+            # ── THEMES tab ────────────────────────────────────────────────────────
+            p = pages["Themes"]
+            tk.Label(p, text="Themes", font=('', 11, 'bold'), bg=t["bg"]).grid(
+                row=0, column=0, columnspan=4, sticky='w', pady=(0, 8))
+
+            theme_vars = {}
+            hex_re = re.compile(r'^#[0-9a-fA-F]{6}$')
+
+            headers = ["Key", "Light", "", "Dark", ""]
+            for col, h in enumerate(headers):
+                tk.Label(p, text=h, font=('', 9, 'bold'), bg=t["bg"], fg=t["hint_fg"]).grid(
+                    row=1, column=col, padx=(0 if col == 0 else 4, 0), sticky='w')
+
+            saved_themes = self.config.get("themes", {})
+
+            def reset_themes():
+                for mode, keys in theme_vars.items():
+                    for key, v in keys.items():
+                        v.set(THEMES[mode][key])
+
+            reset_btn = tk.Label(p, text="Reset to Defaults", bg=t["bg"], fg=t["fg"],
+                                 font=('', 9), cursor="hand2", padx=4)
+            reset_btn.grid(row=1, column=3, columnspan=2, sticky='e')
+            reset_btn.bind("<Button-1>", lambda e: reset_themes())
+            reset_btn.bind("<Enter>", lambda e: reset_btn.configure(bg=t["hover"]))
+            reset_btn.bind("<Leave>", lambda e: reset_btn.configure(bg=t["bg"]))
+
+            for i, key in enumerate(THEMES["light"].keys()):
+                row = i + 2
+                tk.Label(p, text=key, anchor='w', bg=t["bg"], font=('Courier', 9)).grid(
+                    row=row, column=0, sticky='w', pady=2, padx=(0, 12))
+
+                for col, mode in ((1, "light"), (3, "dark")):
+                    default = THEMES[mode][key]
+                    current = saved_themes.get(mode, {}).get(key, default)
+                    v = tk.StringVar(value=current)
+                    theme_vars.setdefault(mode, {})[key] = v
+
+                    e = tk.Entry(p, textvariable=v, width=9, font=('Courier', 9),
+                                 bg=t["entry_bg"], fg=t["entry_fg"])
+                    e.grid(row=row, column=col, sticky='w', padx=(0, 2))
+
+                    swatch = tk.Label(p, width=2, bg=current, relief='flat')
+                    swatch.grid(row=row, column=col + 1, padx=(0, 8))
+
+                    def update_swatch(var=v, sw=swatch):
+                        val = var.get()
+                        if hex_re.match(val):
+                            sw.configure(bg=val)
+
+                    v.trace_add("write", lambda *_, var=v, sw=swatch: update_swatch(var, sw))
+
+            def _save_themes():
+                bad = []
+                for mode, keys in theme_vars.items():
+                    for key, v in keys.items():
+                        val = v.get().strip()
+                        if not hex_re.match(val):
+                            bad.append(f"{mode}/{key}: '{val}'")
+                if bad:
+                    messagebox.showwarning("Invalid Hex", "Fix these:\n" + "\n".join(bad))
+                    return False
+                custom = {}
+                for mode, keys in theme_vars.items():
+                    custom[mode] = {k: v.get().strip() for k, v in keys.items()}
+                self.config["themes"] = custom
+                return True
 
     def pick_files(self, choice=None):
         self._run(lambda: self._pick_files_work(choice), job_name="Add Input")
