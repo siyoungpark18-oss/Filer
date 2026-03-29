@@ -470,109 +470,110 @@ class App:
                                          padx=10, pady=10)
         text.pack(fill='both', expand=True)
 
-        help_text = """Tankobon.
+        text.tag_configure("h1", font=('Courier', 16, 'bold'))
+        text.tag_configure("h2", font=('Courier', 12, 'bold'))
+        text.tag_configure("body", font=('Courier', 11))
+        text.tag_configure("dim", font=('Courier', 10), foreground="gray")
 
-Tankobon is a file manager.
-To be more specific, it's specialized for image management en masse. It's meant to manage, convert, and compress folders with images or individual images in the thousands at a time and to do this with speed.
+        def h1(s):  text.insert(tk.END, s + "\n", "h1")
+        def h2(s):  text.insert(tk.END, s + "\n", "h2")
+        def body(s): text.insert(tk.END, s + "\n", "body")
+        def gap():  text.insert(tk.END, "\n")
 
-And with this comes its true Niche or intended use. Ultimately, Tankobon is a companion to large scale Manga Piracy. To those who wish to own and obtain manga from third party sources you may find that a multitude of reasons can impede time-efficient management of what could be thousands of manga pages, each stored as an individual image.
+        h1("Tankobon")
+        gap()
+        body("Tankobon is a file manager.")
+        body("To be more specific, it's specialized for image management en masse. It's meant to manage, convert, and compress folders with images or individual images in the thousands at a time and to do this with speed.")
+        gap()
+        body("And with this comes its true Niche or intended use. Ultimately, Tankobon is a companion to large scale Manga Piracy. To those who wish to own and obtain manga from third party sources you may find that a multitude of reasons can impede time-efficient management of what could be thousands of manga pages, each stored as an individual image.")
+        gap()
+        body("Following is the explanation of the use cases for each tool within this Niche. I hope it's useful in these areas at the very least.")
+        gap()
+        gap()
+        h2("The Intended use of each tool")
+        gap()
+        h2("Folders to PDF")
+        body("This is a tool that quite unassumingly turns multiple folders into a PDF. However, this can be quite a feat to do manually when working with a manga.")
+        gap()
+        body("This tool is meant to be used to combine All or some of the individual chapters of a manga into a single pdf. Since chapters in a manga downloader such as Hakuneko or Mihon are downloaded individually, and a manga can have hundreds of chapters, this is a useful way to compress them into a single PDF if wanted.")
+        gap()
+        body("The PDF format is generally most useful for reading on monitors, provided were still talking about manga here.")
+        gap()
+        h2("Images to PDF")
+        body("A companion tool to folders to pdf. This tool is comparatively simple and simply requires you to input a folder with multiple images in it. The tool will create an output based on the input.")
+        gap()
+        h2("Folder Renamer")
+        body("The folder renamer renames files based on the number in its file name. If there are multiple numbers, it is no good.")
+        gap()
+        body("However, its main use case is with Manga chapters. When manga is downloaded its usual format is in an image set form with the images of individual chapters or volumes in a folder.")
+        gap()
+        body("Provided the naming conventions of the folders is simple and each folder is named by Chapter It can extract the number. This is useful in certain cases where the naming conventions are obscured by different scanlation groups.")
+        gap()
+        body("This program usually does nothing if there are no numbers available.")
+        gap()
+        h2("File Renamer")
+        body("A similar but different tool that also renames files. This is a general renaming tool which can replace certain parts of file names, add a prefix or suffix to the file name, or use the sequence function to sort by number.")
+        gap()
+        h2("Combine Image Sets")
+        body("This tool combines multiple folders of images into a single folder with all the images, preserving order.")
+        gap()
+        h2("Image Converter")
+        body("Can convert a ton of images to whatever format is on the list.")
+        gap()
+        h2("Find Duplicates")
+        body("Finds exact image duplicates of files by file hash.")
+        gap()
+        h2("PDF Combiner")
+        body("Combines multiple PDFs into one.")
+        gap()
+        h2("PDF Splitter")
+        body("Splits a PDF at page numbers you specify.")
+        gap()
+        h2("PDF to Images")
+        body("Converts a PDF into individual image files. Resource intensive.")
+        gap()
+        body("DPI settings are for printing, so there's no reason to use a DPI higher than the minimum usually.")
+        gap()
+        gap()
+        h1("Utility")
+        gap()
+        h2("Add Input")
+        body("Adds files or a folder to the input directory for processing.")
+        gap()
+        h2("Clear Input")
+        body("Clears the current input folder. Originals are not affected.")
+        gap()
+        h2("Status")
+        body("Displays what's currently in the input and output folders.")
+        gap()
+        h2("Clear Log")
+        body("Clears the log display.")
+        gap()
+        h2("Clear Output")
+        body("Clears the output folder.")
+        gap()
+        h2("Cancel Job")
+        body("Cancels the currently running job.")
+        gap()
+        h2("Open Output")
+        body("Opens the output folder in Finder/Explorer.")
+        gap()
+        h2("Preferences (≡)")
+        body("Set paths, configure behaviour, defaults, throttles, and visible buttons.")
+        gap()
+        gap()
+        h1("Example Workflow")
+        gap()
+        text.insert(tk.END, "1. ", "h2")
+        body("Click Add Input and add your files or folder.")
+        text.insert(tk.END, "2. ", "h2")
+        body("Select a tool and run it.")
+        text.insert(tk.END, "3. ", "h2")
+        body("Take the output from the output folder.")
+        text.insert(tk.END, "4. ", "h2")
+        body("Clear input when done.")
+        gap()
 
-Following is the explanation of the use cases for each tool within this Niche. I hope it's useful in these areas at the very least.
-
-
-
-The Intended use of each tool
-
-Folders to PDF
-This is a tool that quite unassumingly turns multiple folders into a PDF. However, this can be quite a feat to do manually when working with a manga.
-
-This tool is meant to be used to combine All or some of the individual chapters of a manga into a single pdf. Since chapters in a manga downloader such as Hakuneko or Mihon are downloaded individually, and a manga can have hundreds of chapters, this is a useful way to compress them into a single PDF if wanted.
-
-The PDF format is generally most useful for reading on monitors, provided were still talking about manga here.
-
-
-Images to PDF
-A companion tool to folders to pdf. This tool is comparatively simple and simply requires you to input a folder with multiple images in it. The tool will create an output based on the input.
-
-
-Folder Renamer
-The folder renamer renames files based on the number in its file name. If there are multiple numbers, it is no good.
-
-However, its main use case is with Manga chapters. When manga is downloaded its usual format is in an image set form with the images of individual chapters or volumes in a folder.
-
-Provided the naming conventions of the folders is simple and each folder is named by Chapter It can extract the number. This is useful in certain cases where the naming conventions are obscured by different scanlation groups.
-
-This program usually does nothing if there are no numbers available.
-
-
-File Renamer
-A similar but different tool that also renames files. This is a general renaming tool which can replace certain parts of file names, add a prefix or suffix to the file name, or use the sequence function to sort by number.
-
-
-Combined Image Sets
-This tool combines multiple folders of images into a single folder with all the images, preserving order.
-
-
-Image Converter
-Can convert a ton of images to whatever format is on the list.
-
-
-Find Duplicates
-Finds exact image duplicates of files by file hash.
-
-
-PDF Combiner
-Combines multiple PDFs into one.
-
-
-PDF Splitter
-Splits a PDF at page numbers you specify.
-
-
-PDF to Images
-Converts a PDF into individual image files. Resource intensive.
-
-DPI settings are for printing, so there's no reason to use a DPI higher than the minimum usually.
-
-
-
-UTILITY
-
-Add Input:
-Adds files or a folder to the input directory for processing.
-
-Clear Input:
-Clears the current input folder. Originals are not affected.
-
-Status:
-Displays what's currently in the input and output folders.
-
-Clear Log:
-Clears the log display.
-
-Clear Output:
-Clears the output folder.
-
-Cancel Job:
-Cancels the currently running job.
-
-Open Output:
-Opens the output folder in Finder/Explorer.
-
-Preferences (≡):
-Set paths, configure behaviour, defaults, throttles, and visible buttons.
-
-
-
-Example of Workflow
-
-1. Click Add Input and add your files or folder.
-2. Select a tool and run it.
-3. Take the output from the output folder.
-4. Clear input when done.
-
-"""
-        text.insert('1.0', help_text)
         text.configure(state='disabled')
         tk.Button(win, text="Close", command=win.destroy).pack(pady=8)
 
