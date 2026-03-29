@@ -221,10 +221,10 @@ class App:
         "Images to PDF":      [],
         "Folder Renamer":     ["prefix", "suffix", "replace", "extract number"],
         "File Renamer":       ["prefix", "suffix", "replace", "sequence"],
-        "Combine Image Sets": ["natural", "none"],
+        "Combine Image Sets": [],
         "Image Converter":    ["jpg", "png", "webp", "bmp", "tiff"],
         "Find Duplicates":    ["keep one copy", "delete all"],
-        "PDF Combiner":       ["natural", "none"],
+        "PDF Combiner":       [],
         "PDF Splitter":       [],
         "PDF to Images":      ["jpg", "png"],
         "Add Input":          ["files", "folder"],
@@ -237,8 +237,6 @@ class App:
         "Image Converter": "default_img_fmt",
         "Find Duplicates": "default_dedupe_mode",
         "PDF to Images":   "default_img_fmt",
-        "PDF Combiner": "default_sort",
-        "Combine Image Sets": "default_sort",
     }
 
     OPTION_LABELS = {
@@ -256,8 +254,6 @@ class App:
         "tiff":           "TIFF",
         "keep one copy":  "Keep one copy",
         "delete all":     "Delete all instances",
-        "natural":        "Natural sort",
-        "none":           "No sort",
         "files":          "Files",
         "folder":         "Individual Folder",
     }
