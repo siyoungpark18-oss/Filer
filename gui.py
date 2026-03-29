@@ -991,22 +991,16 @@ class App:
         )
 
         if not options or has_default:
-            # Direct-run: clicking header or ▶ runs the tool immediately
-            for w in (hdr_f, hdr_lbl):
-                w.bind("<Button-1>", lambda e, fn=run_fn, jn=label:
-                       self._inject_and_run(fn, None, jn))
-                w.bind("<Enter>", lambda e: hdr_lbl.configure(bg=self._theme()["hover"]))
-                w.bind("<Leave>", lambda e: hdr_lbl.configure(bg=self._theme()["bg"]))
             hdr_lbl.configure(text=label)
 
-            # ▶ run button on the right
+            # ▶ run button on the right — only this fires the job
             rbf = tk.Frame(hdr_row, bg=t["fg"], padx=1, pady=1)
             rbl = tk.Label(rbf, text="▶", bg=t["bg"], fg=t["fg"],
                            font=('', 9), padx=5, cursor="hand2")
             rbl.pack()
             rbf.pack(side='right', padx=(4, 2))
             rbl.bind("<Button-1>", lambda e, fn=run_fn, jn=label:
-                     self._inject_and_run(fn, None, jn))
+            self._inject_and_run(fn, None, jn))
             rbl.bind("<Enter>", lambda e, b=rbl: b.configure(bg=self._theme()["hover"]))
             rbl.bind("<Leave>", lambda e, b=rbl: b.configure(bg=self._theme()["bg"]))
 
@@ -1477,55 +1471,6 @@ class App:
                 print(f"  Failed: {src.name}: {e}")
                 fail += 1
         print(f"  Done! {ok} added{f', {fail} failed' if fail else ''} → {input_dir}")
-
-        def open_dialog(c):
-            if c == "files":
-                paths = filedialog.askopenfilenames(title="Select files to add to Input")
-                dialog_result.put(list(paths))
-            elif c == "folder":
-                folder = filedialog.askdirectory(title="Select a folder to add to Input")
-                dialog_result.put([folder] if folder else [])
-            else:
-                dialog_result.put([])
-
-        def run():
-            if choice is None:
-                # Classic mode — key-press flow
-                print("Add to Input")
-                print("  Enter = Files   Space = Folder   Escape = Cancel")
-                raw = thread_safe_input("Waiting for key...").strip()
-                if raw == "FILES":
-                    c = "files"
-                elif raw == "FOLDER":
-                    c = "folder"
-                else:
-                    print("  Cancelled.")
-                    return
-            else:
-                c = choice
-
-            self.root.after(0, lambda: open_dialog(c))
-            paths = dialog_result.get()
-            if not paths:
-                print("  Nothing selected.")
-                return
-            print(f"  Copying {len(paths)} item(s) to Input...")
-            ok, fail = 0, 0
-            for p in paths:
-                src = Path(p)
-                dest = input_dir / src.name
-                try:
-                    if src.is_dir():
-                        shutil.copytree(str(src), str(dest), dirs_exist_ok=True)
-                    else:
-                        shutil.copy2(str(src), str(dest))
-                    ok += 1
-                except Exception as e:
-                    print(f"  Failed: {src.name}: {e}")
-                    fail += 1
-            print(f"  Done! {ok} added{f', {fail} failed' if fail else ''} → {input_dir}")
-
-        self._run(run, job_name="Add Input")
 
     def run_folders_to_pdf(self):
         self._run(lambda: folders_to_pdf(self.config, self.cancel_event), job_name="Folders to PDF")
