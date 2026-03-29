@@ -23,7 +23,7 @@ SENTINEL = "\x00CANCELLED\x00"
 DEFAULTS = {
     "input":                    "./resources",
     "output":                   "./resources",
-    "default_sort":             "ask",
+    "default_sort":             "natural",
     "default_dpi":              "72",
     "default_img_fmt":          "ask",
     "auto_clear_input":         False,
@@ -88,15 +88,7 @@ def do_auto_clear(config):
 
 
 def resolve_sort(config):
-    mode = config.get("default_sort", "ask")
-    if mode == "natural":
-        return True
-    if mode == "none":
-        return False
-    raw = input("Sort order? 1=Natural  2=None (default 1): ").strip()
-    if raw == SENTINEL:
-        return None
-    return raw != "2"
+    return config.get("default_sort", "natural") != "none"
 
 
 def throttle_if_needed(config):
@@ -157,11 +149,11 @@ def _is_no_space(e):
     return False
 
 
-def collect_image_paths(folder, image_extensions, sub_print=None):
+def collect_image_paths(folder, image_extensions, sub_print=None, use_sort=True):
     _print = sub_print if sub_print is not None else print
     paths = []
     skipped = []
-    items = sorted(folder.iterdir(), key=lambda x: natural_sort_key(x.name))
+    items = sorted(folder.iterdir(), key=lambda x: natural_sort_key(x.name)) if use_sort else list(folder.iterdir())
     for item in items:
         if item.is_file():
             if item.suffix.lower() in image_extensions:
@@ -169,7 +161,7 @@ def collect_image_paths(folder, image_extensions, sub_print=None):
             else:
                 skipped.append((item, "unsupported type"))
         elif item.is_dir():
-            sub_paths, sub_skipped = collect_image_paths(item, image_extensions, sub_print)
+            sub_paths, sub_skipped = collect_image_paths(item, image_extensions, sub_print, use_sort)
             paths.extend(sub_paths)
             skipped.extend(sub_skipped)
             if sub_paths:
@@ -288,8 +280,10 @@ def folders_to_pdf(config, cancel=None):
     print(f"  Mode: {mode}")
     print(f"  Note: cannot be cancelled once PDF conversion starts.")
 
+    use_sort = resolve_sort(config)
     folders = sorted([f for f in src.iterdir() if f.is_dir()],
-                     key=lambda x: natural_sort_key(x.name))
+                     key=lambda x: natural_sort_key(x.name)) if use_sort else \
+        [f for f in src.iterdir() if f.is_dir()]
 
     if not folders:
         print("  No folders found in Input!")
@@ -310,7 +304,7 @@ def folders_to_pdf(config, cancel=None):
                 return
             throttle_if_needed(config)
             start_section(f"[{folder.name}]")
-            paths, skipped = collect_image_paths(folder, IMAGE_EXTENSIONS, sub_print=print)
+            paths, skipped = collect_image_paths(folder, IMAGE_EXTENSIONS, sub_print=print, use_sort=use_sort)
             end_section()
             all_paths.extend(paths)
             all_skipped.extend(skipped)
@@ -345,7 +339,7 @@ def folders_to_pdf(config, cancel=None):
                 subfolders = sorted(
                     [f for f in folder.iterdir() if f.is_dir()],
                     key=lambda x: natural_sort_key(x.name)
-                )
+                ) if use_sort else [f for f in folder.iterdir() if f.is_dir()]
                 units.extend(subfolders) if subfolders else units.append(folder)
             return units
 
@@ -361,7 +355,7 @@ def folders_to_pdf(config, cancel=None):
                 return
             throttle_if_needed(config)
             start_section(f"[{unit.name}]")
-            paths, skipped = collect_image_paths(unit, IMAGE_EXTENSIONS, sub_print=print)
+            paths, skipped = collect_image_paths(unit, IMAGE_EXTENSIONS, sub_print=print, use_sort=use_sort)
             end_section()
             total_skipped.extend(skipped)
             print(f"  [{unit.name}]  {len(paths)} image(s)"
@@ -413,8 +407,9 @@ def images_to_pdf(config, cancel=None):
         else:
             skipped.append((f, "unsupported type"))
 
-    image_files = sorted(image_files,
-                         key=lambda x: natural_sort_key(str(x.relative_to(src))))
+    if resolve_sort(config):
+        image_files = sorted(image_files,
+                             key=lambda x: natural_sort_key(str(x.relative_to(src))))
 
     if not image_files:
         print("  No images found in Input!")
@@ -587,8 +582,9 @@ def file_renamer(config, cancel=None):
     if not _check_disk_space(out, config):
         return
 
-    items = sorted([f for f in src.rglob("*") if f.is_file()],
-                   key=lambda x: natural_sort_key(x.name))
+    items = [f for f in src.rglob("*") if f.is_file()]
+    if resolve_sort(config):
+        items = sorted(items, key=lambda x: natural_sort_key(x.name))
 
     if not items:
         print("  No files found in Input!")
@@ -694,8 +690,6 @@ def combine_image_sets(config, cancel=None):
         return
 
     sort_result = resolve_sort(config)
-    if sort_result is None:
-        return _cancel()
     use_sort = sort_result
 
     def collect_images(folder):
@@ -995,9 +989,7 @@ def pdf_combiner(config, cancel=None):
     if not _check_disk_space(out, config):
         return
 
-    sort_result = resolve_sort(config)
-    if sort_result is None:
-        return _cancel()
+    use_sort = resolve_sort(config)
 
     all_files = list(src.rglob("*"))
     pdfs = []
@@ -1010,7 +1002,7 @@ def pdf_combiner(config, cancel=None):
         else:
             skipped.append((f, "not a PDF"))
 
-    if sort_result:
+    if use_sort:
         pdfs = sorted(pdfs, key=lambda x: natural_sort_key(x.name))
 
     if not pdfs:
