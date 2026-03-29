@@ -24,7 +24,7 @@ DEFAULTS = {
     "input":                    "./resources",
     "output":                   "./resources",
     "default_sort":             "ask",
-    "default_dpi":              "ask",
+    "default_dpi":              "72",
     "default_img_fmt":          "ask",
     "auto_clear_input":         False,
     "replace_output":           True,
