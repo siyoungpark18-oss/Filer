@@ -268,6 +268,17 @@ class App:
             self._apply_to_widget(widget, t)
         self.log.configure(bg=t["log_bg"], fg=t["log_fg"],
                            insertbackground=t["log_fg"])
+        for tag in self.log.tag_names():
+            if tag.startswith("section_"):
+                self.log.tag_configure(tag, foreground=t["log_fg"])
+            elif tag.startswith("log_dim"):
+                self.log.tag_configure(tag, foreground=t["log_dim"])
+            elif tag.startswith("log_error"):
+                self.log.tag_configure(tag, foreground=t["log_error"])
+            elif tag.startswith("log_warn"):
+                self.log.tag_configure(tag, foreground=t["log_warn"])
+            elif tag.startswith("log_success"):
+                self.log.tag_configure(tag, foreground=t["log_success"])
         self._update_button_states()
 
     def _on_scroll(self, first, last):
