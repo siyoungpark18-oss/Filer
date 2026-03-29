@@ -268,17 +268,6 @@ class App:
             self._apply_to_widget(widget, t)
         self.log.configure(bg=t["log_bg"], fg=t["log_fg"],
                            insertbackground=t["log_fg"])
-        for tag in self.log.tag_names():
-            if tag.startswith("section_"):
-                self.log.tag_configure(tag, foreground=t["log_fg"])
-            elif tag.startswith("log_dim"):
-                self.log.tag_configure(tag, foreground=t["log_dim"])
-            elif tag.startswith("log_error"):
-                self.log.tag_configure(tag, foreground=t["log_error"])
-            elif tag.startswith("log_warn"):
-                self.log.tag_configure(tag, foreground=t["log_warn"])
-            elif tag.startswith("log_success"):
-                self.log.tag_configure(tag, foreground=t["log_success"])
         self._update_button_states()
 
     def _on_scroll(self, first, last):
@@ -1335,7 +1324,8 @@ Example of Workflow
                 tk.Label(page, text=label, anchor='w', bg=t["bg"]).grid(
                     row=row, column=0, sticky='w', pady=4, padx=(0, 16))
                 if typ == "check":
-                    v = tk.BooleanVar(value=bool(self.config.get(key, DEFAULTS.get(key, False))))
+                    default = True if key in ("guide_empty_input", "show_tooltips") else False
+                    v = tk.BooleanVar(value=bool(self.config.get(key, default)))
                     tk.Checkbutton(page, variable=v, bg=t["bg"]).grid(row=row, column=1, sticky='w')
                 else:
                     v = tk.StringVar(value=str(self.config.get(key, opts[0])))
