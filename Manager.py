@@ -261,8 +261,8 @@ def _get_working_folders(src):
                      key=lambda x: natural_sort_key(x.name))
         if sub:
             print(f"  Found 1 top-level folder '{top[0].name}' — operating on its {len(sub)} subfolder(s).")
-            return sub, top[0]
-    return top, src
+            return sub
+    return top
 
 
 def folders_to_pdf(config, cancel=None):
@@ -462,7 +462,7 @@ def folder_renamer(config, cancel=None):
         return
 
     # If input has a single wrapper folder, operate on its children
-    folders, work_root = _get_working_folders(src)
+    folders = _get_working_folders(src)
 
     if not folders:
         print("  No folders found in Input!")
@@ -507,6 +507,7 @@ def folder_renamer(config, cancel=None):
         for f in folders:
             preview.append((f, out / f.name.replace(param1, param2)))
 
+
     elif mode == "extract number":
         def collect(folder, dest_parent):
             subfolders = sorted([f for f in folder.iterdir() if f.is_dir()],
@@ -524,8 +525,9 @@ def folder_renamer(config, cancel=None):
                 else:
                     skipped.append((sub, "no number found"))
                     collect(sub, dest_parent / sub.name)
-        # For extract number, recurse from work_root directly
-        collect(work_root, out)
+
+        for folder in folders:
+            collect(folder, out)
 
     else:
         print("  Invalid mode.")
@@ -902,6 +904,7 @@ def find_duplicates(config, cancel=None):
 
     print(f"  Hashing {len(all_files)} image(s)...")
 
+    file_digests = {}
     hashes = {}
     duplicates = set()
     hash_failed = []
@@ -912,6 +915,7 @@ def find_duplicates(config, cancel=None):
             return
         try:
             digest = hashlib.md5(f.read_bytes()).hexdigest()
+            file_digests[f] = digest
             if digest in hashes:
                 duplicates.add(f)
             else:
@@ -942,21 +946,8 @@ def find_duplicates(config, cancel=None):
         print(f"  Mode: {mode}")
 
     if mode == "delete all":
-        hash_counts = {}
-        for f in all_files:
-            try:
-                digest = hashlib.md5(f.read_bytes()).hexdigest()
-                hash_counts[digest] = hash_counts.get(digest, 0) + 1
-            except Exception:
-                pass
-        all_duped_hashes = {d for d, c in hash_counts.items() if c > 1}
-        exclude = set()
-        for f in all_files:
-            try:
-                if hashlib.md5(f.read_bytes()).hexdigest() in all_duped_hashes:
-                    exclude.add(f)
-            except Exception:
-                pass
+        duped_digests = {file_digests[f] for f in duplicates}
+        exclude = {f for f, d in file_digests.items() if d in duped_digests}
         print(f"  {len(exclude)} image(s) excluded (all instances).")
     elif mode == "keep one copy":
         exclude = duplicates
