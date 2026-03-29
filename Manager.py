@@ -201,7 +201,7 @@ def save_pdf(image_paths, output_path):
 
 
 def _get_run_name(config, prompt="Run name (Enter to skip): "):
-    if not config.get("ask_run_name", True):
+    if not config.get("ask_run_name", False):
         return "Output"
     val = input(prompt).strip()
     if val == SENTINEL:
