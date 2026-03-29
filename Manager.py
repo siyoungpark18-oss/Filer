@@ -36,7 +36,7 @@ DEFAULTS = {
     "dark_mode":                False,
     "min_free_gb":              2,
     "log_default_expanded":     False,
-    "ask_run_name":             True,
+    "ask_run_name":             False,
     "show_timestamps":          True,
 
 }
