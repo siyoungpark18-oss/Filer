@@ -65,14 +65,24 @@ def get_input(config):
 
 def get_output(config, operation, run_name):
     if config.get("sort_output", False):
-        folder = Path(config["output"]) / "output" / operation / run_name
+        base = Path(config["output"]) / "output" / operation / run_name
     else:
-        folder = Path(config["output"]) / "output" / run_name
-    if config.get("replace_output", True) and folder.exists():
-        shutil.rmtree(folder)
+        base = Path(config["output"]) / "output" / run_name
+    if config.get("replace_output", True) and base.exists():
+        shutil.rmtree(base)
+        folder = base
+    elif not config.get("replace_output", True) and base.exists():
+        counter = 1
+        while True:
+            candidate = base.parent / f"{base.name}{counter}"
+            if not candidate.exists():
+                folder = candidate
+                break
+            counter += 1
+    else:
+        folder = base
     folder.mkdir(parents=True, exist_ok=True)
     return folder
-
 
 def do_auto_clear(config):
     if config.get("auto_clear_input"):
