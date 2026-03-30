@@ -1295,17 +1295,17 @@ class App:
             row=0, column=0, columnspan=2, sticky='w', pady=(0, 8))
 
         general_fields = [
-            ("ui_mode",                "UI Mode",                            "combo", ["classic", "dropdown"]),
-            ("allow_concurrent_jobs",  "Allow Multiple Jobs at Once",        "check", None),
-            ("auto_clear_input",       "Auto Clear Input After Job",         "check", None),
-            ("ask_run_name",           "Ask for Run Name",                   "check", None),
-            ("replace_output",         "Replace Output Each Run",            "check", None),
-            ("sort_output",            "Sort Output by Operation",           "check", None),
-            ("guide_empty_input",      "Dim Tools when Input Empty",         "check", None),
-            ("show_tooltips",          "Show Tooltip Hints",                 "check", None),
-            ("log_default_expanded",   "Log Sections Expanded by Default",   "check", None),
-            ("show_timestamps", "Show Timestamps in Log",                    "check", None),
-            ("min_free_gb",            "Min Free Space to Start (GB)",       "combo", ["0","1","2","3","5","10"]),
+            ("ui_mode",                "UI Mode",                           "combo", ["classic", "dropdown"]),
+            ("allow_concurrent_jobs",  "Concurrent Operations",             "check", None),
+            ("auto_clear_input",       "Clear Input after Operation",       "check", None),
+            ("ask_run_name",           "Run Name",                          "check", None),
+            ("replace_output",         "Replace Output",                    "check", None),
+            ("sort_output",            "Sort Output by Operation",          "check", None),
+            ("guide_empty_input",      "Dim Tools when Input Empty",        "check", None),
+            ("show_tooltips",          "Show Tooltips",                     "check", None),
+            ("log_default_expanded",   "Expand Log Dialogue by Default",    "check", None),
+            ("show_timestamps",        "Show Timestamps",                   "check", None),
+            ("min_free_gb",            "Minimum Free Space",                "combo", ["0","1","2","3","5","10"]),
         ]
 
         tools_fields = [
@@ -1330,11 +1330,46 @@ class App:
 
         vars_ = {}
 
+        PREF_TIPS = {
+            "ui_mode": "Classic UI uses a combination of simple buttons and the keyboard to pick options.\n The Dropdown UI places options under a tool header.\n\n When tools are defaulted to a specific option, options are no longer prompted for either way.",
+            "allow_concurrent_jobs": "Run multiple different tools at the same time. With this, outputs can generate in quick succession.\n To prevent new outputs from replacing old ones, use the run name option and disable replace output.\n\n Generally leads to more errors and bugs and tends to spread computer resources thin.",
+            "auto_clear_input": "Automatically Empties the Input folder after an Operation is completed.",
+            "ask_run_name": "Prompts you to name each output. The folder generated in output will use that name.\n Does not name individual files.",
+            "replace_output": "When enabled, the most recent output replaces the an older one with the same name.",
+            "sort_output": "Organises the output into subfolders named after each operation.\n If outputs are also named, they are named within the operation folder.",
+            "guide_empty_input": "Dims the tool buttons when the Input folder is empty\n A visual reminder to add an Input.",
+            "show_tooltips": "Shows the small 'i' hint icons next to buttons.\n You cannot disable tooltips in Preferences.",
+            "log_default_expanded": "Compressible areas of the Log, not the toolbar,\n are expanded by default rather than collapsed.",
+            "show_timestamps": "Prints a timestamp and divider line in the log before each Operation.\n Happens for all Tools and the Status Utility.",
+            "min_free_gb": "The Minimum Storage Requirement to begin an Operation in GB.\n The program will usually warn you of low storage before this.",
+            "default_folders_to_pdf_mode": "The 'Combine' option compresses all folders into one PDF.\n The 'Individual' option makes one PDF per folder, preserving the previous file system.",
+            "default_sort": "Controls the Order files are processed in.\n Natural mode sorts files by numbers extracted from their name.\n In Natural sort 'episode 1' would come before 'chapter 2, rather than going by letter.\n\n 'None' simply uses your filesystem order.",
+            "default_folder_renamer_mode": "The mode the Folder Renamer uses by default.\n\n The'Extract Number' mode names the folder after any numbers in its name to make it easier to sort.\n This mode doesn't work very well if there are multiple unrelated numbers in the file name",
+            "default_file_renamer_mode": "The mode the File Renamer uses by default.\n\n The 'Sequence' mode names the file after numerical order in the file system with the option to add a base.\n This base replaces the current file name and is applied to all files.\n\n This mode doesn't work very well if there are multiple unrelated numbers in the file name",
+            "default_img_fmt": "The default image format that the image converter converts to.\n Also The default format for for images converted from a PDF in PDF to images",
+            "default_dedupe_mode": "'Keep one copy' excludes all identical files except the original from the output.\n Delete all excludes all identical files from output, including its original.",
+            "default_dpi": "The Default DPI when converting a PDF to Images.\n A DPI higher than 72 or 96 is generally only useful for paper printing.",
+            "hotkey_continue": "The key you press to continue or confirm in the log prompt.\n Primarily used in Classic Mode",
+            "hotkey_cancel": "The key you press to cancel in the log prompt. Primarily used in Classic Mode.\n Not all Operations can be canceled consistently once they are running.",
+            "throttle_cpu": "Throttles the Operation if CPU usage exceeds the threshold.\n If your computer already exceeds this limit, it will throttle until it drops below it.\n 0 removes the limit, and can cause you're computer to crash.",
+            "throttle_mem": "Throttles the Operation if RAM usage exceeds the threshold.\n If your computer already exceeds this limit, it will throttle until it drops below it.\n 0 removes the limit, and can cause you're computer to crash.",
+        }
+
         def build_fields(page, fields, start_row=1):
             for i, (key, label, typ, opts) in enumerate(fields):
                 row = start_row + i
                 tk.Label(page, text=label, anchor='w', bg=t["bg"]).grid(
                     row=row, column=0, sticky='w', pady=4, padx=(0, 16))
+                if key in PREF_TIPS and self.config.get("show_tooltips", True):
+                    info = tk.Label(page, text="i", bg=t["bg"], fg=t["hint_fg"],
+                                    font=('', 9), cursor="hand2", padx=2)
+                    info.grid(row=row, column=2, sticky='w')
+                    info.bind("<Enter>", lambda e, w=info, txt=PREF_TIPS[key]: (
+                        w.configure(bg=t["hover"]), self._show_tooltip_popup(w, txt)))
+                    info.bind("<Leave>", lambda e, w=info: (
+                        w.configure(bg=t["bg"]),
+                        self._tooltip.destroy() if hasattr(self, '_tooltip') and self._tooltip else None
+                    ))
                 if typ == "check":
                     default = True if key in ("guide_empty_input", "show_tooltips") else False
                     v = tk.BooleanVar(value=bool(self.config.get(key, default)))
@@ -1420,74 +1455,75 @@ class App:
             lbl.bind("<Enter>", lambda e, l=lbl: l.configure(bg=t["hover"]))
             lbl.bind("<Leave>", lambda e, l=lbl: l.configure(bg=t["btn_bg"]))
 
-            # ── THEMES tab ────────────────────────────────────────────────────────
-            p = pages["Themes"]
-            tk.Label(p, text="Themes", font=('', 11, 'bold'), bg=t["bg"]).grid(
-                row=0, column=0, columnspan=4, sticky='w', pady=(0, 8))
+        show_tab("Paths")
+        # ── THEMES tab ────────────────────────────────────────────────────────
+        p = pages["Themes"]
+        tk.Label(p, text="Themes", font=('', 11, 'bold'), bg=t["bg"]).grid(
+            row=0, column=0, columnspan=4, sticky='w', pady=(0, 8))
 
-            theme_vars = {}
-            hex_re = re.compile(r'^#[0-9a-fA-F]{6}$')
+        theme_vars = {}
+        hex_re = re.compile(r'^#[0-9a-fA-F]{6}$')
 
-            headers = ["Key", "Light", "", "Dark", ""]
-            for col, h in enumerate(headers):
-                tk.Label(p, text=h, font=('', 9, 'bold'), bg=t["bg"], fg=t["hint_fg"]).grid(
-                    row=1, column=col, padx=(0 if col == 0 else 4, 0), sticky='w')
+        headers = ["Key", "Light", "", "Dark", ""]
+        for col, h in enumerate(headers):
+            tk.Label(p, text=h, font=('', 9, 'bold'), bg=t["bg"], fg=t["hint_fg"]).grid(
+                row=1, column=col, padx=(0 if col == 0 else 4, 0), sticky='w')
 
-            saved_themes = self.config.get("themes", {})
+        saved_themes = self.config.get("themes", {})
 
-            def reset_themes():
-                for mode, keys in theme_vars.items():
-                    for key, v in keys.items():
-                        v.set(THEMES[mode][key])
+        def reset_themes():
+            for mode, keys in theme_vars.items():
+                for key, v in keys.items():
+                    v.set(THEMES[mode][key])
 
-            reset_btn = tk.Label(p, text="Reset to Defaults", bg=t["bg"], fg=t["fg"],
+        reset_btn = tk.Label(p, text="Reset to Defaults", bg=t["bg"], fg=t["fg"],
                                  font=('', 9), cursor="hand2", padx=4)
-            reset_btn.grid(row=1, column=3, columnspan=2, sticky='e')
-            reset_btn.bind("<Button-1>", lambda e: reset_themes())
-            reset_btn.bind("<Enter>", lambda e: reset_btn.configure(bg=t["hover"]))
-            reset_btn.bind("<Leave>", lambda e: reset_btn.configure(bg=t["bg"]))
+        reset_btn.grid(row=1, column=3, columnspan=2, sticky='e')
+        reset_btn.bind("<Button-1>", lambda e: reset_themes())
+        reset_btn.bind("<Enter>", lambda e: reset_btn.configure(bg=t["hover"]))
+        reset_btn.bind("<Leave>", lambda e: reset_btn.configure(bg=t["bg"]))
 
-            KEY_LABELS = {
-                "bg": "Background",
-                "fg": "Text",
-                "log_bg": "Log Background",
-                "log_fg": "Log Text",
-                "entry_bg": "Input Field Background",
-                "entry_fg": "Input Field Text",
-                "btn_bg": "Button Background",
-                "btn_fg": "Button Text",
-                "hint_fg": "Hint / Dim Text",
-                "hover": "Hover Highlight",
-                "log_error": "Log Error",
-                "log_warn": "Log Warning",
-                "log_success": "Log Success",
-                "log_dim": "Log Dim Text",
-            }
+        KEY_LABELS = {
+            "bg": "Background",
+            "fg": "Text",
+            "log_bg": "Log Background",
+            "log_fg": "Log Text",
+            "entry_bg": "Input Field Background",
+            "entry_fg": "Input Field Text",
+            "btn_bg": "Button Background",
+            "btn_fg": "Button Text",
+            "hint_fg": "Hint / Dim Text",
+            "hover": "Hover Highlight",
+            "log_error": "Log Error",
+            "log_warn": "Log Warning",
+            "log_success": "Log Success",
+            "log_dim": "Log Dim Text",
+        }
 
-            for i, key in enumerate(THEMES["light"].keys()):
-                row = i + 2
-                tk.Label(p, text=KEY_LABELS.get(key, key), anchor='w', bg=t["bg"], font=('', 9)).grid(
-                    row=row, column=0, sticky='w', pady=2, padx=(0, 12))
+        for i, key in enumerate(THEMES["light"].keys()):
+            row = i + 2
+            tk.Label(p, text=KEY_LABELS.get(key, key), anchor='w', bg=t["bg"], font=('', 9)).grid(
+                row=row, column=0, sticky='w', pady=2, padx=(0, 12))
 
-                for col, mode in ((1, "light"), (3, "dark")):
-                    default = THEMES[mode][key]
-                    current = saved_themes.get(mode, {}).get(key, default)
-                    v = tk.StringVar(value=current)
-                    theme_vars.setdefault(mode, {})[key] = v
+            for col, mode in ((1, "light"), (3, "dark")):
+                default = THEMES[mode][key]
+                current = saved_themes.get(mode, {}).get(key, default)
+                v = tk.StringVar(value=current)
+                theme_vars.setdefault(mode, {})[key] = v
 
-                    e = tk.Entry(p, textvariable=v, width=9, font=('Courier', 9),
+                e = tk.Entry(p, textvariable=v, width=9, font=('Courier', 9),
                                  bg=t["entry_bg"], fg=t["entry_fg"])
-                    e.grid(row=row, column=col, sticky='w', padx=(0, 2))
+                e.grid(row=row, column=col, sticky='w', padx=(0, 2))
 
-                    swatch = tk.Label(p, width=2, bg=current, relief='flat')
-                    swatch.grid(row=row, column=col + 1, padx=(0, 8))
+                swatch = tk.Label(p, width=2, bg=current, relief='flat')
+                swatch.grid(row=row, column=col + 1, padx=(0, 8))
 
-                    def update_swatch(var=v, sw=swatch):
-                        val = var.get()
-                        if hex_re.match(val):
-                            sw.configure(bg=val)
+                def update_swatch(var=v, sw=swatch):
+                    val = var.get()
+                    if hex_re.match(val):
+                        sw.configure(bg=val)
 
-                    v.trace_add("write", lambda *_, var=v, sw=swatch: update_swatch(var, sw))
+                v.trace_add("write", lambda *_, var=v, sw=swatch: update_swatch(var, sw))
 
             def _save_themes():
                 bad = []
