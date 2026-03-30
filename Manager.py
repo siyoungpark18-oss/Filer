@@ -21,23 +21,24 @@ SENTINEL = "\x00CANCELLED\x00"
 
 #DEFAULTS——————————————————————————————————————————————————————————————————————————————————————————————————
 DEFAULTS = {
-    "input":                    "./resources",
-    "output":                   "./resources",
-    "default_sort":             "natural",
-    "default_dpi":              "72",
-    "default_img_fmt":          "ask",
-    "auto_clear_input":         False,
-    "replace_output":           True,
-    "sort_output":              False,
-    "hotkey_continue":          "Return",
-    "hotkey_cancel":            "Escape",
-    "throttle_cpu":             80,
-    "throttle_mem":             80,
-    "dark_mode":                False,
-    "min_free_gb":              2,
-    "log_default_expanded":     False,
-    "ask_run_name":             False,
-    "show_timestamps":          True,
+    "input":                     "./resources",
+    "output":                    "./resources",
+    "default_sort":              "natural",
+    "default_dpi":               "72",
+    "default_img_fmt":           "ask",
+    "default_pdf_to_images_fmt": "ask",
+    "auto_clear_input":          False,
+    "replace_output":            True,
+    "sort_output":               False,
+    "hotkey_continue":           "Return",
+    "hotkey_cancel":             "Escape",
+    "throttle_cpu":              80,
+    "throttle_mem":              80,
+    "dark_mode":                 False,
+    "min_free_gb":               2,
+    "log_default_expanded":      False,
+    "ask_run_name":              False,
+    "show_timestamps":           True,
 
 }
 
@@ -1086,7 +1087,7 @@ def pdf_to_images(config, cancel=None):
     if run_name is None:
         return _cancel()
 
-    fmt = config.get("default_img_fmt", "ask")
+    fmt = config.get("default_pdf_to_images_fmt", "ask")
     if fmt == "ask":
         raw = input("Format (jpg/png, default jpg): ").strip().lower()
         if raw == SENTINEL:
