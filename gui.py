@@ -805,7 +805,7 @@ class App:
         widget.bind("<Enter>", on_enter)
         widget.bind("<Leave>", on_leave)
 
-    def _show_tooltip_popup(self, widget, text):
+    def _show_tooltip_popup(self, widget, text, force_light=False):
         if hasattr(self, '_tooltip') and self._tooltip:
             self._tooltip.destroy()
         x = widget.winfo_rootx() + widget.winfo_width() + 4
@@ -813,7 +813,7 @@ class App:
         self._tooltip = tk.Toplevel(self.root)
         self._tooltip.wm_overrideredirect(True)
         self._tooltip.wm_geometry(f"+{x}+{y}")
-        t = self._theme()
+        t = THEMES["light"] if force_light else self._theme()
         tk.Label(self._tooltip, text=text, font=('Courier', 10),
                  bg=t["btn_bg"], fg=t["fg"], padx=6, pady=4).pack()
 
@@ -1367,7 +1367,7 @@ class App:
                                     font=('', 9), cursor="hand2", padx=2)
                     info.grid(row=row, column=2, sticky='w')
                     info.bind("<Enter>", lambda e, w=info, txt=PREF_TIPS[key]: (
-                        w.configure(bg=t["hover"]), self._show_tooltip_popup(w, txt)))
+                        w.configure(bg=t["hover"]), self._show_tooltip_popup(w, txt, force_light=True)))
                     info.bind("<Leave>", lambda e, w=info: (
                         w.configure(bg=t["bg"]),
                         self._tooltip.destroy() if hasattr(self, '_tooltip') and self._tooltip else None
