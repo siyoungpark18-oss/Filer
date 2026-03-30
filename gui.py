@@ -1272,9 +1272,24 @@ class App:
             row=r, column=0, columnspan=2, sticky='w', pady=(0, 8))
         r += 1
 
+        PATH_TIPS = {
+            "input": "The folder Tankobon reads from. Files and folders copied here are processed by tools that you can operate.\n You can use the 'open input' tool to view the current input folder",
+            "output": "The folder Tankobon writes results to. Once the Input is processed by tools, the result is here.\n You can use the 'open output' tool to view the current output folder",
+        }
         for key, title in (("input", "Input directory"), ("output", "Output directory")):
-            tk.Label(p, text=title, anchor='w', bg=t["bg"]).grid(
-                row=r, column=0, columnspan=2, sticky='w', pady=(6, 0))
+            row_f = tk.Frame(p, bg=t["bg"])
+            row_f.grid(row=r, column=0, columnspan=2, sticky='w', pady=(6, 0))
+            tk.Label(row_f, text=title, anchor='w', bg=t["bg"]).pack(side='left')
+            if self.config.get("show_tooltips", True):
+                info = tk.Label(row_f, text="i", bg=t["bg"], fg=t["hint_fg"],
+                                font=('', 9), cursor="hand2", padx=2)
+                info.pack(side='left', padx=(3, 0))
+                info.bind("<Enter>", lambda e, w=info, txt=PATH_TIPS[key]: (
+                    w.configure(bg=t["hover"]), self._show_tooltip_popup(w, txt, force_light=True)))
+                info.bind("<Leave>", lambda e, w=info: (
+                    w.configure(bg=t["bg"]),
+                    self._tooltip.destroy() if hasattr(self, '_tooltip') and self._tooltip else None
+                ))
             r += 1
             e = tk.Entry(p, width=40, readonlybackground=t["entry_bg"])
             e.insert(0, paths[key].get())
@@ -1405,15 +1420,50 @@ class App:
 
         p = pages["Buttons"]
         tk.Label(p, text="Visible Buttons", font=('', 11, 'bold'), bg=t["bg"]).grid(
-            row=0, column=0, columnspan=2, sticky='w', pady=(0, 8))
+            row=0, column=0, columnspan=2, sticky='w', pady=(0, 4))
+        tk.Label(p, text="Toggle which tool buttons are visible in the sidebar.", fg=t["hint_fg"],
+                 bg=t["bg"], font=('', 9)).grid(row=1, column=0, columnspan=2, sticky='w', pady=(0, 8))
 
         btn_vars = {}
         for i, (key, section, label, _) in enumerate(self.TOGGLEABLE):
             v = tk.BooleanVar(value=bool(self.config.get(key, True)))
             tk.Label(p, text=f"{label}  ({section})", anchor='w', bg=t["bg"]).grid(
-                row=i + 1, column=0, sticky='w', pady=3)
-            tk.Checkbutton(p, variable=v, bg=t["bg"]).grid(row=i + 1, column=1, sticky='w')
+                row=i + 2, column=0, sticky='w', pady=3)
+            tk.Checkbutton(p, variable=v, bg=t["bg"]).grid(row=i + 2, column=1, sticky='w')
             btn_vars[key] = v
+
+        # ── THEMES tab ────────────────────────────────────────────────────────
+        p = pages["Themes"]
+        tk.Label(p, text="Themes", font=('', 11, 'bold'), bg=t["bg"]).grid(
+            row=0, column=0, columnspan=4, sticky='w', pady=(0, 4))
+        tk.Label(p, text="Customise colours for light and dark mode. Type a 6-digit hex code.", fg=t["hint_fg"],
+                    bg=t["bg"], font=('', 9)).grid(row=1, column=0, columnspan=4, sticky='w', pady=(0, 8))
+
+        theme_vars = {}
+        hex_re = re.compile(r'^#[0-9a-fA-F]{6}$')
+
+        headers = ["Key", "Light", "", "Dark", ""]
+        for col, h in enumerate(headers):
+            tk.Label(p, text=h, font=('', 9, 'bold'), bg=t["bg"], fg=t["hint_fg"]).grid(
+                row=2, column=col, padx=(0 if col == 0 else 4, 0), sticky='w')
+
+        saved_themes = self.config.get("themes", {})
+
+        def _save_themes():
+            bad = []
+            for mode, keys in theme_vars.items():
+                for key, v in keys.items():
+                    val = v.get().strip()
+                    if not hex_re.match(val):
+                        bad.append(f"{mode}/{key}: '{val}'")
+            if bad:
+                messagebox.showwarning("Invalid Hex", "Fix these:\n" + "\n".join(bad))
+                return False
+            custom = {}
+            for mode, keys in theme_vars.items():
+                custom[mode] = {k: v.get().strip() for k, v in keys.items()}
+            self.config["themes"] = custom
+            return True
 
         def save():
             if not _save_themes():
@@ -1457,21 +1507,6 @@ class App:
             lbl.bind("<Enter>", lambda e, l=lbl: l.configure(bg=t["hover"]))
             lbl.bind("<Leave>", lambda e, l=lbl: l.configure(bg=t["btn_bg"]))
 
-        show_tab("Paths")
-        # ── THEMES tab ────────────────────────────────────────────────────────
-        p = pages["Themes"]
-        tk.Label(p, text="Themes", font=('', 11, 'bold'), bg=t["bg"]).grid(
-            row=0, column=0, columnspan=4, sticky='w', pady=(0, 8))
-
-        theme_vars = {}
-        hex_re = re.compile(r'^#[0-9a-fA-F]{6}$')
-
-        headers = ["Key", "Light", "", "Dark", ""]
-        for col, h in enumerate(headers):
-            tk.Label(p, text=h, font=('', 9, 'bold'), bg=t["bg"], fg=t["hint_fg"]).grid(
-                row=1, column=col, padx=(0 if col == 0 else 4, 0), sticky='w')
-
-        saved_themes = self.config.get("themes", {})
 
         def reset_themes():
             for mode, keys in theme_vars.items():
@@ -1480,7 +1515,7 @@ class App:
 
         reset_btn = tk.Label(p, text="Reset to Defaults", bg=t["bg"], fg=t["fg"],
                                  font=('', 9), cursor="hand2", padx=4)
-        reset_btn.grid(row=1, column=3, columnspan=2, sticky='e')
+        reset_btn.grid(row=2, column=3, columnspan=2, sticky='e')
         reset_btn.bind("<Button-1>", lambda e: reset_themes())
         reset_btn.bind("<Enter>", lambda e: reset_btn.configure(bg=t["hover"]))
         reset_btn.bind("<Leave>", lambda e: reset_btn.configure(bg=t["bg"]))
@@ -1503,7 +1538,7 @@ class App:
         }
 
         for i, key in enumerate(THEMES["light"].keys()):
-            row = i + 2
+            row = i + 3
             tk.Label(p, text=KEY_LABELS.get(key, key), anchor='w', bg=t["bg"], font=('', 9)).grid(
                 row=row, column=0, sticky='w', pady=2, padx=(0, 12))
 
@@ -1527,21 +1562,9 @@ class App:
 
                 v.trace_add("write", lambda *_, var=v, sw=swatch: update_swatch(var, sw))
 
-            def _save_themes():
-                bad = []
-                for mode, keys in theme_vars.items():
-                    for key, v in keys.items():
-                        val = v.get().strip()
-                        if not hex_re.match(val):
-                            bad.append(f"{mode}/{key}: '{val}'")
-                if bad:
-                    messagebox.showwarning("Invalid Hex", "Fix these:\n" + "\n".join(bad))
-                    return False
-                custom = {}
-                for mode, keys in theme_vars.items():
-                    custom[mode] = {k: v.get().strip() for k, v in keys.items()}
-                self.config["themes"] = custom
-                return True
+
+        show_tab("Paths")
+
 
     def pick_files(self, choice=None):
         self._run(lambda: self._pick_files_work(choice), job_name="Add Input")
