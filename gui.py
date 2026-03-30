@@ -1447,9 +1447,26 @@ class App:
             reset_btn.bind("<Enter>", lambda e: reset_btn.configure(bg=t["hover"]))
             reset_btn.bind("<Leave>", lambda e: reset_btn.configure(bg=t["bg"]))
 
+            KEY_LABELS = {
+                "bg": "Background",
+                "fg": "Text",
+                "log_bg": "Log Background",
+                "log_fg": "Log Text",
+                "entry_bg": "Input Field Background",
+                "entry_fg": "Input Field Text",
+                "btn_bg": "Button Background",
+                "btn_fg": "Button Text",
+                "hint_fg": "Hint / Dim Text",
+                "hover": "Hover Highlight",
+                "log_error": "Log Error",
+                "log_warn": "Log Warning",
+                "log_success": "Log Success",
+                "log_dim": "Log Dim Text",
+            }
+
             for i, key in enumerate(THEMES["light"].keys()):
                 row = i + 2
-                tk.Label(p, text=key, anchor='w', bg=t["bg"], font=('Courier', 9)).grid(
+                tk.Label(p, text=KEY_LABELS.get(key, key), anchor='w', bg=t["bg"], font=('', 9)).grid(
                     row=row, column=0, sticky='w', pady=2, padx=(0, 12))
 
                 for col, mode in ((1, "light"), (3, "dark")):
