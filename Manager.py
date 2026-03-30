@@ -21,8 +21,8 @@ SENTINEL = "\x00CANCELLED\x00"
 
 #DEFAULTS——————————————————————————————————————————————————————————————————————————————————————————————————
 DEFAULTS = {
-    "input":                     "./resources",
-    "output":                    "./resources",
+    "input":                     "",
+    "output":                    "",
     "default_sort":              "natural",
     "default_dpi":               "72",
     "default_img_fmt":           "ask",
