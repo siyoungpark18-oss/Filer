@@ -237,7 +237,7 @@ class App:
         "File Renamer":    "default_file_renamer_mode",
         "Image Converter": "default_img_fmt",
         "Find Duplicates": "default_dedupe_mode",
-        "PDF to Images":   "default_img_fmt",
+        "PDF to Images":   "default_pdf_to_images_fmt",
     }
 
     OPTION_LABELS = {
@@ -1313,7 +1313,8 @@ class App:
             ("default_sort",               "Default Sort Mode",               "combo", ["natural", "none"]),
             ("default_folder_renamer_mode", "Folder Renamer: Default Mode",   "combo", ["ask", "prefix", "suffix", "replace", "extract number"]),
             ("default_file_renamer_mode",  "File Renamer: Default Mode",      "combo", ["ask", "prefix", "suffix", "replace", "sequence"]),
-            ("default_img_fmt",            "Default Image Format",            "combo", ["ask", "jpg", "png", "webp", "bmp", "tiff"]),
+            ("default_img_fmt",            "Image Converter: Default Format",  "combo", ["ask", "jpg", "png", "webp", "bmp", "tiff"]),
+            ("default_pdf_to_images_fmt",  "PDF to Images: Default Format",    "combo", ["ask", "jpg", "png"]),
             ("default_dedupe_mode",        "Find Duplicates: Default Mode",   "combo", ["ask", "keep one copy", "delete all"]),
             ("default_dpi",               "Default DPI (PDF to Images)",      "combo", ["ask","72","96","150","200","300","600"]),
         ]
@@ -1335,7 +1336,7 @@ class App:
             "allow_concurrent_jobs": "Run multiple different tools at the same time. With this, outputs can generate in quick succession.\n To prevent new outputs from replacing old ones, use the run name option and disable replace output.\n\n Generally leads to more errors and bugs and tends to spread computer resources thin.",
             "auto_clear_input": "Automatically Empties the Input folder after an Operation is completed.",
             "ask_run_name": "Prompts you to name each output. The folder generated in output will use that name.\n Does not name individual files.",
-            "replace_output": "When enabled, the most recent output replaces the an older one with the same name.",
+            "replace_output": "When enabled, the most recent output replaces the an older output with the same name.\n\n If you don't name or sort your runs, the new output will simply replace the previous one, so you can re-run a operation if you make a mistake",
             "sort_output": "Organises the output into subfolders named after each operation.\n If outputs are also named, they are named within the operation folder.",
             "guide_empty_input": "Dims the tool buttons when the Input folder is empty\n A visual reminder to add an Input.",
             "show_tooltips": "Shows the small 'i' hint icons next to buttons.\n You cannot disable tooltips in Preferences.",
@@ -1346,7 +1347,8 @@ class App:
             "default_sort": "Controls the Order files are processed in.\n Natural mode sorts files by numbers extracted from their name.\n In Natural sort 'episode 1' would come before 'chapter 2, rather than going by letter.\n\n 'None' simply uses your filesystem order.",
             "default_folder_renamer_mode": "The mode the Folder Renamer uses by default.\n\n The'Extract Number' mode names the folder after any numbers in its name to make it easier to sort.\n This mode doesn't work very well if there are multiple unrelated numbers in the file name",
             "default_file_renamer_mode": "The mode the File Renamer uses by default.\n\n The 'Sequence' mode names the file after numerical order in the file system with the option to add a base.\n This base replaces the current file name and is applied to all files.\n\n This mode doesn't work very well if there are multiple unrelated numbers in the file name",
-            "default_img_fmt": "The default image format that the image converter converts to.\n Also The default format for for images converted from a PDF in PDF to images",
+            "default_img_fmt": "The default image format the Image Converter converts to.",
+            "default_pdf_to_images_fmt": "The default image format for images exported from a PDF.",
             "default_dedupe_mode": "'Keep one copy' excludes all identical files except the original from the output.\n Delete all excludes all identical files from output, including its original.",
             "default_dpi": "The Default DPI when converting a PDF to Images.\n A DPI higher than 72 or 96 is generally only useful for paper printing.",
             "hotkey_continue": "The key you press to continue or confirm in the log prompt.\n Primarily used in Classic Mode",
