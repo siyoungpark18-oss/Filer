@@ -938,17 +938,7 @@ def find_duplicates(config, cancel=None):
         print("")
         return
 
-    print(f"  Found {len(duplicates)} duplicate(s) out of {len(all_files)} images:")
-    start_section, end_section = _get_log_section_fns()
-    start_section(f"  Duplicates found ({len(duplicates)})")
-    for dup in sorted(duplicates, key=lambda x: natural_sort_key(x.name)):
-        import sys
-        log = sys.stdout
-        if hasattr(log, 'write_with_preview'):
-            log.write_with_preview(f"    {dup.name}", dup)
-        else:
-            print(f"    {dup.name}")
-    end_section()
+    print(f"  Found {len(duplicates)} duplicate(s) out of {len(all_files)} images.")
 
     mode = config.get("default_dedupe_mode", "ask")
     if mode == "ask":
@@ -962,14 +952,24 @@ def find_duplicates(config, cancel=None):
     if mode == "delete all":
         duped_digests = {file_digests[f] for f in duplicates}
         exclude = {f for f, d in file_digests.items() if d in duped_digests}
-        print(f"  {len(exclude)} image(s) excluded (all instances).")
     elif mode == "keep one copy":
         exclude = duplicates
-        print(f"  {len(exclude)} duplicate(s) excluded.")
     else:
         print("  Invalid mode.")
         print("")
         return
+
+    import sys
+    log = sys.stdout
+    start_section, end_section = _get_log_section_fns()
+    start_section(f"  Excluding ({len(exclude)})")
+    for f in sorted(exclude, key=lambda x: natural_sort_key(x.name)):
+        if hasattr(log, 'write_with_preview'):
+            log.write_with_preview(f"    {f.name}", f)
+        else:
+            print(f"    {f.name}")
+    end_section()
+    print(f"  {len(exclude)} image(s) will be excluded.")
 
     copied = 0
     failed = []
