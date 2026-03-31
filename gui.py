@@ -209,6 +209,7 @@ class App:
         self._btn_labels = {}
         self._suboption_labels = {}
         self._last_input_count = -1
+        self._moon_image = self._load_moon_icon()
         patch_input()
         self._build_ui()
         self._apply_theme()
@@ -266,6 +267,16 @@ class App:
         custom = self.config.get("themes", {}).get(base, {})
         return {**hardcoded, **custom}
 
+    def _load_moon_icon(self):
+        try:
+            from PIL import Image, ImageTk
+            assets = Path(__file__).parent / "assets"
+            img = Image.open(assets / "moon.png").resize((14, 14), Image.LANCZOS)
+            return ImageTk.PhotoImage(img)
+        except Exception:
+            return None
+
+
     def _apply_theme(self):
         t = self._theme()
         self.root.configure(bg=t["bg"])
@@ -320,7 +331,14 @@ class App:
         self.config["dark_mode"] = self._dark
         save_config(self.config)
         self._apply_theme()
-        self._dark_btn.configure(text="☀" if self._dark else "🌙")
+        if self._dark:
+            self._dark_btn.configure(image="", text="☀")
+        else:
+            if self._moon_image:
+                self._dark_btn.configure(image=self._moon_image, text="")
+                self._dark_btn.image = self._moon_image
+            else:
+                self._dark_btn.configure(image="", text="🌙")
         new_tip = "Bright Mode" if self._dark else "Dark Mode"
         self._dark_btn.bind("<Enter>", lambda e: (
             self._dark_btn.configure(bg=self._theme()["hover"]),
@@ -631,7 +649,7 @@ class App:
         def _mini_btn(parent, text_or_var, cmd, side='right', tooltip=None):
             t = self._theme()
             f = tk.Frame(parent, bg=t["fg"], padx=1, pady=1)
-            lbl = tk.Label(f, bg=t["bg"], fg=t["fg"], font=('', 10), width=2, cursor="hand2")
+            lbl = tk.Label(f, bg=t["bg"], fg=t["fg"], font=('', 10), width=0, cursor="hand2")
             if isinstance(text_or_var, str):
                 lbl.configure(text=text_or_var)
             lbl.pack()
@@ -664,8 +682,12 @@ class App:
         _mini_btn(title_row, "?", self._show_help, tooltip="Help")
         _mini_btn(title_row, "i", self._show_docs, tooltip="Documentation")
         _mini_btn(title_row, "≡", self._show_preferences, tooltip="Preferences")
-        self._dark_btn = _mini_btn(title_row, "🌙" if not self._dark else "☀", self._toggle_dark,
+        moon_icon = self._moon_image if (self._moon_image and not self._dark) else ("☀" if self._dark else "🌙")
+        self._dark_btn = _mini_btn(title_row, moon_icon, self._toggle_dark,
                                    tooltip="Dark Mode" if not self._dark else "Bright Mode")
+        if self._moon_image and not self._dark:
+            self._dark_btn.configure(image=self._moon_image, text="")
+            self._dark_btn.image = self._moon_image
 
         status_row = tk.Frame(left)
         status_row.pack(fill='x', pady=(0, 4))
