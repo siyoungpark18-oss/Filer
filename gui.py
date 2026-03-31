@@ -1612,13 +1612,6 @@ class App:
                 for key, v in keys.items():
                     v.set(THEMES[mode][key])
 
-        reset_btn = tk.Label(p, text="Reset to Defaults", bg=t["bg"], fg=t["fg"],
-                                 font=('', 9), cursor="hand2", padx=4)
-        reset_btn.grid(row=2, column=3, columnspan=2, sticky='e')
-        reset_btn.bind("<Button-1>", lambda e: reset_themes())
-        reset_btn.bind("<Enter>", lambda e: reset_btn.configure(bg=t["hover"]))
-        reset_btn.bind("<Leave>", lambda e: reset_btn.configure(bg=t["bg"]))
-
         KEY_LABELS = {
             "bg": "Background",
             "fg": "Text",
@@ -1661,6 +1654,13 @@ class App:
 
                 v.trace_add("write", lambda *_, var=v, sw=swatch: update_swatch(var, sw))
 
+        bottom_row = len(THEMES["light"].keys()) + 3
+        reset_btn = tk.Label(p, text="Reset to Defaults", bg=t["bg"], fg=t["fg"],
+                             font=('', 9), cursor="hand2", padx=4)
+        reset_btn.grid(row=bottom_row, column=0, columnspan=5, sticky='w', pady=(8, 0))
+        reset_btn.bind("<Button-1>", lambda e: reset_themes())
+        reset_btn.bind("<Enter>", lambda e: reset_btn.configure(bg=t["hover"]))
+        reset_btn.bind("<Leave>", lambda e: reset_btn.configure(bg=t["bg"]))
 
         show_tab("Paths")
 
