@@ -942,7 +942,12 @@ def find_duplicates(config, cancel=None):
     start_section, end_section = _get_log_section_fns()
     start_section(f"  Duplicates found ({len(duplicates)})")
     for dup in sorted(duplicates, key=lambda x: natural_sort_key(x.name)):
-        print(f"    {dup.name}")
+        import sys
+        log = sys.stdout
+        if hasattr(log, 'write_with_preview'):
+            log.write_with_preview(f"    {dup.name}", dup)
+        else:
+            print(f"    {dup.name}")
     end_section()
 
     mode = config.get("default_dedupe_mode", "ask")
