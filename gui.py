@@ -488,6 +488,7 @@ class App:
 
         h1("Tankobon")
         gap()
+        body("For Information on specific tools or preferences, hover over the 'i' tooltips")
         body("Tankobon is a file manager.")
         body("To be more specific, it's specialized for image management en masse. It's meant to manage, convert, and compress folders with images or individual images in the thousands at a time and to do this with speed.")
         gap()
@@ -775,14 +776,25 @@ class App:
         if not out_dir.exists():
             print(f"  Output folder does not exist yet: {out_dir}")
             return
-        print(f"  Output: {out_dir}")
+
+        target = out_dir
+        if self.config.get("open_output_recent", False):
+            subfolders = [f for f in out_dir.iterdir() if f.is_dir()]
+            if subfolders:
+                target = max(subfolders, key=lambda f: f.stat().st_mtime)
+                print(f"  Output (most recent): {target}")
+            else:
+                print(f"  Output: {out_dir}")
+        else:
+            print(f"  Output: {out_dir}")
+
         import subprocess, sys as _sys
         if _sys.platform == "darwin":
-            subprocess.Popen(["open", str(out_dir)])
+            subprocess.Popen(["open", str(target)])
         elif _sys.platform == "win32":
-            subprocess.Popen(["explorer", str(out_dir)])
+            subprocess.Popen(["explorer", str(target)])
         else:
-            subprocess.Popen(["xdg-open", str(out_dir)])
+            subprocess.Popen(["xdg-open", str(target)])
 
     def _show_tooltip(self, widget, text):
         def on_enter(e):
@@ -1320,6 +1332,7 @@ class App:
             ("show_tooltips",          "Show Tooltips",                     "check", None),
             ("log_default_expanded",   "Expand Log Dialogue by Default",    "check", None),
             ("show_timestamps",        "Show Timestamps",                   "check", None),
+            ("open_output_recent", "Open Most Recent Output", "check", None),
             ("min_free_gb",            "Minimum Free Space",                "combo", ["0","1","2","3","5","10"]),
         ]
 
@@ -1357,10 +1370,11 @@ class App:
             "show_tooltips": "Shows the small 'i' hint icons next to buttons.\n You cannot disable tooltips in Preferences.",
             "log_default_expanded": "Compressible areas of the Log, not the toolbar,\n are expanded by default rather than collapsed.",
             "show_timestamps": "Prints a timestamp and divider line in the log before each Operation.\n Happens for all Tools and the Status Utility.",
+            "open_output_recent": "When enabled, the Open Output button opens the most recentt output rather than the entire Output folder.\n Useful for jumping straight to your latest result.",
             "min_free_gb": "The Minimum Storage Requirement to begin an Operation in GB.\n The program will usually warn you of low storage before this.",
             "default_folders_to_pdf_mode": "The 'Combine' option compresses all folders into one PDF.\n The 'Individual' option makes one PDF per folder, preserving the previous file system.",
             "default_sort": "Controls the Order files are processed in.\n Natural mode sorts files by numbers extracted from their name.\n In Natural sort 'episode 1' would come before 'chapter 2, rather than going by letter.\n\n 'None' simply uses your filesystem order.",
-            "default_folder_renamer_mode": "The mode the Folder Renamer uses by default.\n\n The'Extract Number' mode names the folder after any numbers in its name to make it easier to sort.\n This mode doesn't work very well if there are multiple unrelated numbers in the file name",
+            "default_folder_renamer_mode": "The mode the Folder Renamer uses by default.\n\n The 'Extract Number' mode names the folder after any numbers in its name to make it easier to sort.\n This mode doesn't work very well if there are multiple unrelated numbers in the file name",
             "default_file_renamer_mode": "The mode the File Renamer uses by default.\n\n The 'Sequence' mode names the file after numerical order in the file system with the option to add a base.\n This base replaces the current file name and is applied to all files.\n\n This mode doesn't work very well if there are multiple unrelated numbers in the file name",
             "default_img_fmt": "The default image format the Image Converter converts to.",
             "default_pdf_to_images_fmt": "The default image format for images exported from a PDF.",
@@ -1479,7 +1493,7 @@ class App:
                 val = v.get()
                 if key in ("auto_clear_input", "replace_output", "sort_output",
                            "guide_empty_input", "show_tooltips", "allow_concurrent_jobs",
-                           "log_default_expanded", "show_timestamps"):
+                           "log_default_expanded", "show_timestamps","open_output_recent"):
                     self.config[key] = bool(val)
                 elif key in ("throttle_cpu", "throttle_mem"):
                     self.config[key] = int(str(val).split()[0])
