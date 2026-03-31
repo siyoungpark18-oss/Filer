@@ -101,33 +101,51 @@ class LogRedirect(io.TextIOBase):
         self.log.tag_configure(tag, foreground=self.app._theme()["log_dim"])
 
         insert_tags = tuple(t for t in (hide_tag, tag) if t)
-        self.log.insert(tk.END, msg + "\n", insert_tags)
+        indent = len(msg) - len(msg.lstrip())
+        if indent and hide_tag:
+            self.log.insert(tk.END, msg[:indent], (hide_tag,))
+            self.log.insert(tk.END, msg[indent:] + "\n", insert_tags)
+        else:
+            self.log.insert(tk.END, msg + "\n", insert_tags)
 
         def show_preview(e, path=image_path):
-            try:
-                from PIL import Image, ImageTk
-                img = Image.open(path)
-                img.thumbnail((300, 400))
-                photo = ImageTk.PhotoImage(img)
+            def _show(path=path):
+                if not hasattr(self.app, '_preview_after') or self.app._preview_after is None:
+                    return
+                self.app._preview_after = None
+                try:
+                    from PIL import Image, ImageTk
+                    img = Image.open(path)
+                    img.thumbnail((300, 400))
+                    photo = ImageTk.PhotoImage(img)
 
-                if hasattr(self.app, '_preview_popup') and self.app._preview_popup:
-                    self.app._preview_popup.destroy()
+                    if hasattr(self.app, '_preview_popup') and self.app._preview_popup:
+                        self.app._preview_popup.destroy()
 
-                popup = tk.Toplevel(self.app.root)
-                popup.wm_overrideredirect(True)
-                px = min(e.x_root + 10, self.app.root.winfo_screenwidth() - 320)
-                py = min(e.y_root + 10, self.app.root.winfo_screenheight() - 420)
-                popup.wm_geometry(f"+{px}+{py}")
+                    popup = tk.Toplevel(self.app.root)
+                    popup.wm_overrideredirect(True)
+                    mx = self.app.root.winfo_pointerx()
+                    my = self.app.root.winfo_pointery()
+                    px = min(mx + 10, self.app.root.winfo_screenwidth() - 320)
+                    py = min(my + 10, self.app.root.winfo_screenheight() - 420)
+                    popup.wm_geometry(f"+{px}+{py}")
 
-                lbl = tk.Label(popup, image=photo, bg="#000000")
-                lbl.image = photo
-                lbl.pack()
+                    lbl = tk.Label(popup, image=photo, bg="#000000")
+                    lbl.image = photo
+                    lbl.pack()
 
-                self.app._preview_popup = popup
-            except Exception:
-                pass
+                    self.app._preview_popup = popup
+                except Exception:
+                    pass
+
+            if hasattr(self.app, '_preview_after') and self.app._preview_after:
+                self.app.root.after_cancel(self.app._preview_after)
+            self.app._preview_after = self.app.root.after(150, _show)
 
         def hide_preview(e):
+            if hasattr(self.app, '_preview_after') and self.app._preview_after:
+                self.app.root.after_cancel(self.app._preview_after)
+                self.app._preview_after = None
             if hasattr(self.app, '_preview_popup') and self.app._preview_popup:
                 self.app._preview_popup.destroy()
                 self.app._preview_popup = None
