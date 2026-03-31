@@ -93,6 +93,51 @@ class LogRedirect(io.TextIOBase):
     def end_section(self):
         self._active_section = None
 
+    def write_with_preview(self, msg, image_path):
+        self.log.configure(state='normal')
+        hide_tag = self._active_section["hide_tag"] if self._active_section else None
+
+        tag = f"preview_{id(image_path)}_{self.log.index(tk.END)}"
+        self.log.tag_configure(tag, foreground=self.app._theme()["log_dim"])
+
+        insert_tags = tuple(t for t in (hide_tag, tag) if t)
+        self.log.insert(tk.END, msg + "\n", insert_tags)
+
+        def show_preview(e, path=image_path):
+            try:
+                from PIL import Image, ImageTk
+                img = Image.open(path)
+                img.thumbnail((300, 400))
+                photo = ImageTk.PhotoImage(img)
+
+                if hasattr(self.app, '_preview_popup') and self.app._preview_popup:
+                    self.app._preview_popup.destroy()
+
+                popup = tk.Toplevel(self.app.root)
+                popup.wm_overrideredirect(True)
+                px = min(e.x_root + 10, self.app.root.winfo_screenwidth() - 320)
+                py = min(e.y_root + 10, self.app.root.winfo_screenheight() - 420)
+                popup.wm_geometry(f"+{px}+{py}")
+
+                lbl = tk.Label(popup, image=photo, bg="#000000")
+                lbl.image = photo
+                lbl.pack()
+
+                self.app._preview_popup = popup
+            except Exception:
+                pass
+
+        def hide_preview(e):
+            if hasattr(self.app, '_preview_popup') and self.app._preview_popup:
+                self.app._preview_popup.destroy()
+                self.app._preview_popup = None
+
+        self.log.tag_bind(tag, "<Enter>", lambda e: (show_preview(e), self.log.configure(cursor="hand2")))
+        self.log.tag_bind(tag, "<Leave>", lambda e: (hide_preview(e), self.log.configure(cursor="")))
+
+        self.log.see(tk.END)
+        self.log.configure(state='disabled')
+
     def _toggle(self, tag, hide_tag):
         self.log.configure(state='normal')
         currently_elided = self.log.tag_cget(hide_tag, "elide")
