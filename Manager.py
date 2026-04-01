@@ -339,55 +339,56 @@ def folders_to_pdf(config, cancel=None):
                 _print_summary(skipped=all_skipped)
             print("")
 
+
+
     else:
-        def get_units(top_folders):
-            units = []
-            for folder in top_folders:
-                subfolders = sorted(
-                    [f for f in folder.iterdir() if f.is_dir()],
-                    key=lambda x: natural_sort_key(x.name)
-                ) if use_sort else [f for f in folder.iterdir() if f.is_dir()]
-                units.extend(subfolders) if subfolders else units.append(folder)
-            return units
-
-        units = get_units(folders)
-        print(f"  {len(units)} unit(s) to convert individually.")
-
         total_converted = 0
         total_skipped = []
-        for i, unit in enumerate(units):
+        for folder in folders:
             if cancel and cancel.is_set():
                 print(f"  Cancelled. ({total_converted} PDFs saved so far)")
                 print("")
                 return
             throttle_if_needed(config)
-            start_section(f"[{unit.name}]")
-            paths, skipped = collect_image_paths(unit, IMAGE_EXTENSIONS, sub_print=print, use_sort=use_sort)
+            subfolders = sorted(
+                [f for f in folder.iterdir() if f.is_dir()],
+                key=lambda x: natural_sort_key(x.name)
+            ) if use_sort else [f for f in folder.iterdir() if f.is_dir()]
+            units = subfolders if subfolders else [folder]
+            # ── scan phase (inside collapsible) ──────────────────────────────
+            start_section(f"[{folder.name}]")
+            folder_skipped = []
+            unit_data = []  # list of (unit, paths, skipped)
+            for unit in units:
+                paths, skipped = collect_image_paths(unit, IMAGE_EXTENSIONS, sub_print=print, use_sort=use_sort)
+                folder_skipped.extend(skipped)
+                skip_str = f"  {len(skipped)} skipped" if skipped else ""
+                print(f"    {unit.name}/  →  {len(paths)} image(s){skip_str}")
+                unit_data.append((unit, paths, skipped))
+            total_img = sum(len(p) for _, p, _ in unit_data)
+            skip_total = f"  {len(folder_skipped)} skipped" if folder_skipped else ""
+            print(f"  [{folder.name}]  {total_img} image(s){skip_total}")
             end_section()
-            total_skipped.extend(skipped)
-            print(f"  [{unit.name}]  {len(paths)} image(s)"
-                  + (f"  {len(skipped)} skipped" if skipped else ""))
-            if not paths:
-                print(f"    No images found, skipping.")
-                continue
-            safe_name = re.sub(r'[^\w\s\-.]', '', unit.name).strip() or unit.name
-            pdf_path = out / f"{safe_name}.pdf"
-            try:
-                save_pdf(paths, pdf_path)
-                total_converted += 1
-            except OSError as e:
-                if _is_no_space(e):
-                    print(f"  ✖ Disk full after {total_converted} PDF(s). Stopping.")
-                    print("")
-                    return
-                print(f"  Failed to save {safe_name}.pdf: {e}")
-
-
+            # ── convert phase (outside collapsible) ──────────────────────────
+            for unit, paths, skipped in unit_data:
+                if not paths:
+                    continue
+                safe_name = re.sub(r'[^\w\s\-.]', '', unit.name).strip() or unit.name
+                pdf_path = out / f"{safe_name}.pdf"
+                try:
+                    save_pdf(paths, pdf_path)
+                    total_converted += 1
+                except OSError as e:
+                    if _is_no_space(e):
+                        print(f"  ✖ Disk full after {total_converted} PDF(s). Stopping.")
+                        print("")
+                        return
+                    print(f"  Failed to save {safe_name}.pdf: {e}")
+            total_skipped.extend(folder_skipped)
         _print_summary(copied=total_converted, skipped=total_skipped if total_skipped else None, label="PDFs saved")
         do_auto_clear(config)
         print(f"  Done! → {out}")
         print("")
-
 
 def images_to_pdf(config, cancel=None):
     src = get_input(config)
@@ -959,7 +960,7 @@ def find_duplicates(config, cancel=None):
     start_section(f"  Excluding ({len(exclude)}) — expand and hover over filenames to preview")
     for f in sorted(exclude, key=lambda x: natural_sort_key(x.name)):
         if hasattr(log, 'write_with_preview'):
-            log.write_with_preview(f"    {f.name}", f)
+            log.write_with_preview(f"      {f.name}", f)
         else:
             print(f"    {f.name}")
     end_section()
@@ -1314,7 +1315,7 @@ def status(config):
             sub_dirs = sorted([i for i in d.iterdir() if i.is_dir()], key=lambda x: natural_sort_key(x.name))
             file_count = sum(1 for _ in d.rglob("*") if _.is_file())
             if sub_dirs:
-                start_section(f"  [folder] {d.name}/  ({file_count} file(s))")
+                start_section(f"[folder] {d.name}/  ({file_count} file(s))")
                 for sd in sub_dirs:
                     sc = sum(1 for _ in sd.rglob("*") if _.is_file())
                     print(f"    {sd.name}/  ({sc} file(s))")
@@ -1342,7 +1343,7 @@ def status(config):
                     print(f"    {sd.name}/  ({sc} file(s))")
                 end_section()
             else:
-                print(f"  {op.name}/  ({file_count} file(s))")
+                print(f"    {op.name}/  ({file_count} file(s))")
     else:
         print("Output  —  empty")
 
