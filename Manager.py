@@ -9,7 +9,6 @@ import hashlib
 import time
 import psutil
 import errno
-import os
 from pypdf import PdfReader, PdfWriter
 
 #PATHS————————————————————————————————————————————————————————————————————————————————————————————————————
@@ -35,12 +34,12 @@ DEFAULTS = {
     "throttle_cpu":              80,
     "throttle_mem":              80,
     "dark_mode":                 False,
-    "min_free_gb":               2,
+    "min_free_gb":               10,
     "log_default_expanded":      False,
     "ask_run_name":              False,
     "show_timestamps":           True,
-    "open_output_recent": False
-
+    "open_output_recent":        False,
+    "first_launch":              True,
 }
 
 #FUNCTIONS——————————————————————————————————————————————————————————————————————————————————————————————————
@@ -85,6 +84,7 @@ def get_output(config, operation, run_name):
         folder = base
     folder.mkdir(parents=True, exist_ok=True)
     return folder
+
 
 def do_auto_clear(config):
     if config.get("auto_clear_input"):
@@ -136,7 +136,6 @@ def _check_disk_space(path, config=None):
         usage = shutil.disk_usage(path)
         free_gb = usage.free / (1024 ** 3)
         min_gb = config.get("min_free_gb", 2) if config else 2
-
         if free_gb < min_gb:
             print(f"  ✖ Not enough disk space: {free_gb:.1f} GB free (minimum: {min_gb} GB).")
             print(f"    Free up space or lower the minimum in Preferences (≡).")
@@ -253,11 +252,6 @@ def _get_log_section_fns():
 
 
 def _get_working_folders(src):
-    """
-    Returns the list of folders to operate on.
-    If Input contains exactly one folder (the common wrapper pattern),
-    operate on that folder's subfolders instead.
-    """
     top = sorted([f for f in src.iterdir() if f.is_dir()],
                  key=lambda x: natural_sort_key(x.name))
     if len(top) == 1:
@@ -309,7 +303,7 @@ def folders_to_pdf(config, cancel=None):
     if mode == "combine":
         all_paths = []
         all_skipped = []
-        for folder in folders:
+        for i, folder in enumerate(folders):
             if cancel and cancel.is_set():
                 print("  Cancelled.")
                 print("")
@@ -322,6 +316,7 @@ def folders_to_pdf(config, cancel=None):
             all_skipped.extend(skipped)
             print(f"  [{folder.name}]  {len(paths)} image(s)"
                   + (f"  {len(skipped)} skipped" if skipped else ""))
+
 
         print(f"  Total: {len(all_paths)} images across {len(folders)} folders")
 
@@ -360,7 +355,7 @@ def folders_to_pdf(config, cancel=None):
 
         total_converted = 0
         total_skipped = []
-        for unit in units:
+        for i, unit in enumerate(units):
             if cancel and cancel.is_set():
                 print(f"  Cancelled. ({total_converted} PDFs saved so far)")
                 print("")
@@ -386,6 +381,7 @@ def folders_to_pdf(config, cancel=None):
                     print("")
                     return
                 print(f"  Failed to save {safe_name}.pdf: {e}")
+
 
         _print_summary(copied=total_converted, skipped=total_skipped if total_skipped else None, label="PDFs saved")
         do_auto_clear(config)
@@ -466,7 +462,6 @@ def folder_renamer(config, cancel=None):
     if not _check_disk_space(out, config):
         return
 
-    # If input has a single wrapper folder, operate on its children
     folders = _get_working_folders(src)
 
     if not folders:
@@ -494,14 +489,12 @@ def folder_renamer(config, cancel=None):
             return _cancel()
         for f in folders:
             preview.append((f, out / (param1 + f.name)))
-
     elif mode == "suffix":
         param1 = input("Suffix to add: ")
         if param1 == SENTINEL:
             return _cancel()
         for f in folders:
             preview.append((f, out / (f.name + param1)))
-
     elif mode == "replace":
         param1 = input("Find: ")
         if param1 == SENTINEL:
@@ -511,8 +504,6 @@ def folder_renamer(config, cancel=None):
             return _cancel()
         for f in folders:
             preview.append((f, out / f.name.replace(param1, param2)))
-
-
     elif mode == "extract number":
         def collect(folder, dest_parent):
             subfolders = sorted([f for f in folder.iterdir() if f.is_dir()],
@@ -530,10 +521,8 @@ def folder_renamer(config, cancel=None):
                 else:
                     skipped.append((sub, "no number found"))
                     collect(sub, dest_parent / sub.name)
-
         for folder in folders:
             collect(folder, out)
-
     else:
         print("  Invalid mode.")
         print("")
@@ -553,7 +542,7 @@ def folder_renamer(config, cancel=None):
 
     failed = []
     copied = 0
-    for old, new in preview:
+    for i, (old, new) in enumerate(preview):
         if cancel and cancel.is_set():
             print(f"  Cancelled. ({copied} renamed so far)")
             print("")
@@ -572,6 +561,7 @@ def folder_renamer(config, cancel=None):
             failed.append((old, str(e)))
         except Exception as e:
             failed.append((old, str(e)))
+
 
     _print_summary(copied=copied, failed=failed if failed else None,
                    skipped=skipped if skipped else None, label="renamed")
@@ -662,7 +652,7 @@ def file_renamer(config, cancel=None):
 
     copied = 0
     failed = []
-    for old, new in preview:
+    for i, (old, new) in enumerate(preview):
         if cancel and cancel.is_set():
             print(f"  Cancelled. ({copied} renamed so far)")
             print("")
@@ -680,6 +670,7 @@ def file_renamer(config, cancel=None):
             failed.append((old, str(e)))
         except Exception as e:
             failed.append((old, str(e)))
+
 
     _print_summary(copied=copied, failed=failed if failed else None, label="renamed")
     do_auto_clear(config)
@@ -701,8 +692,7 @@ def combine_image_sets(config, cancel=None):
     if not _check_disk_space(out, config):
         return
 
-    sort_result = resolve_sort(config)
-    use_sort = sort_result
+    use_sort = resolve_sort(config)
 
     def collect_images(folder):
         all_items = sorted(folder.iterdir(), key=lambda x: natural_sort_key(x.name))
@@ -730,7 +720,9 @@ def combine_image_sets(config, cancel=None):
         print("")
         return
 
-    print(f"  Found {len(folders)} top-level folder(s).")
+    print(f"  Found {len(folders)} top-level folder(s). Scanning...")
+
+
     counter = 1
     total_skipped = []
     total_failed = []
@@ -835,7 +827,7 @@ def image_converter(config, cancel=None):
 
     converted = copied = 0
     failed = []
-    for img_path in images:
+    for i, img_path in enumerate(images):
         if cancel and cancel.is_set():
             print(f"  Cancelled. ({converted + copied} images processed so far)")
             print("")
@@ -878,6 +870,7 @@ def image_converter(config, cancel=None):
             except Exception as e:
                 failed.append((img_path, str(e)))
 
+
     _print_summary(copied=converted + copied, failed=failed if failed else None,
                    skipped=skipped if skipped else None, label="converted")
     do_auto_clear(config)
@@ -916,7 +909,7 @@ def find_duplicates(config, cancel=None):
     hashes = {}
     duplicates = set()
     hash_failed = []
-    for f in all_files:
+    for i, f in enumerate(all_files):
         if cancel and cancel.is_set():
             print("  Cancelled.")
             print("")
@@ -930,6 +923,7 @@ def find_duplicates(config, cancel=None):
                 hashes[digest] = f
         except Exception as e:
             hash_failed.append((f, str(e)))
+
 
     if not duplicates:
         print(f"  No duplicates found across {len(all_files)} images.")
@@ -962,7 +956,7 @@ def find_duplicates(config, cancel=None):
     import sys
     log = sys.stdout
     start_section, end_section = _get_log_section_fns()
-    start_section(f"  Excluding ({len(exclude)})")
+    start_section(f"  Excluding ({len(exclude)}) — expand and hover over filenames to preview")
     for f in sorted(exclude, key=lambda x: natural_sort_key(x.name)):
         if hasattr(log, 'write_with_preview'):
             log.write_with_preview(f"    {f.name}", f)
@@ -971,11 +965,10 @@ def find_duplicates(config, cancel=None):
     end_section()
     print(f"  {len(exclude)} image(s) will be excluded.")
 
+    keep_list = [f for f in all_files if f not in exclude]
     copied = 0
     failed = []
-    for f in all_files:
-        if f in exclude:
-            continue
+    for i, f in enumerate(keep_list):
         dest = out / f.relative_to(src)
         dest.parent.mkdir(parents=True, exist_ok=True)
         try:
@@ -991,6 +984,7 @@ def find_duplicates(config, cancel=None):
             failed.append((f, str(e)))
         except Exception as e:
             failed.append((f, str(e)))
+
 
     _print_summary(copied=copied, failed=failed if failed else None,
                    skipped=skipped if skipped else None, label="copied")
@@ -1040,7 +1034,7 @@ def pdf_combiner(config, cancel=None):
     writer = PdfWriter()
     total_pages = 0
     failed = []
-    for pdf_path in pdfs:
+    for i, pdf_path in enumerate(pdfs):
         if cancel and cancel.is_set():
             print(f"  Cancelled. ({total_pages} pages combined so far)")
             print("")
@@ -1054,6 +1048,7 @@ def pdf_combiner(config, cancel=None):
             print(f"  [{pdf_path.name}]  {len(reader.pages)} page(s)  (running total: {total_pages})")
         except Exception as e:
             failed.append((pdf_path, str(e)))
+
 
     try:
         out_path = out / "combined.pdf"
@@ -1140,7 +1135,15 @@ def pdf_to_images(config, cancel=None):
         print("")
         return
 
-    print(f"  Found {len(pdfs)} PDF(s).")
+    # Pre-count total pages for progress
+    total_page_count = 0
+    for pdf_path in pdfs:
+        try:
+            total_page_count += len(PdfReader(str(pdf_path)).pages)
+        except Exception:
+            pass
+
+    print(f"  Found {len(pdfs)} PDF(s), {total_page_count} pages total.")
     total_pages = 0
     failed = []
     for pdf_path in pdfs:
@@ -1282,6 +1285,7 @@ def pdf_splitter(config, cancel=None):
         except Exception as e:
             failed.append((pdf_path, f"part {i+1}: {e}"))
 
+
     _print_summary(copied=written, failed=failed if failed else None, label="parts saved")
     do_auto_clear(config)
     print(f"  Done! {written} part(s) saved.")
@@ -1309,7 +1313,6 @@ def status(config):
         for d in sorted(dirs, key=lambda x: natural_sort_key(x.name)):
             sub_dirs = sorted([i for i in d.iterdir() if i.is_dir()], key=lambda x: natural_sort_key(x.name))
             file_count = sum(1 for _ in d.rglob("*") if _.is_file())
-
             if sub_dirs:
                 start_section(f"  [folder] {d.name}/  ({file_count} file(s))")
                 for sd in sub_dirs:
@@ -1321,7 +1324,6 @@ def status(config):
 
         for f in sorted(files, key=lambda x: natural_sort_key(x.name)):
             print(f"  [file]   {f.name}")
-
     else:
         print("Input  —  (doesn't exist)")
 
@@ -1333,7 +1335,6 @@ def status(config):
         for op in sorted(items, key=lambda x: natural_sort_key(x.name)):
             sub_dirs = sorted([i for i in op.iterdir() if i.is_dir()], key=lambda x: natural_sort_key(x.name))
             file_count = sum(1 for f in op.rglob("*") if f.is_file())
-
             if sub_dirs:
                 start_section(f"  {op.name}/  ({file_count} file(s))")
                 for sd in sub_dirs:
