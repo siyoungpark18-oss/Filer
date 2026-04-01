@@ -224,11 +224,6 @@ class App:
         except Exception:
             return 0
 
-    def _is_configured(self):
-        inp = self.config.get("input", "")
-        out = self.config.get("output", "")
-        return bool(inp and out and Path(inp).exists() and Path(out).exists())
-
     def _update_button_states(self):
         t = self._theme()
 
