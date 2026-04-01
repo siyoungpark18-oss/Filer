@@ -287,6 +287,7 @@ def folders_to_pdf(config, cancel=None):
     print(f"  Note: cannot be cancelled once PDF conversion starts.")
 
     use_sort = resolve_sort(config)
+    print(f"  Sort: {'natural' if use_sort else 'none'}")
     folders = sorted([f for f in src.iterdir() if f.is_dir()],
                      key=lambda x: natural_sort_key(x.name)) if use_sort else \
         [f for f in src.iterdir() if f.is_dir()]
@@ -694,9 +695,11 @@ def combine_image_sets(config, cancel=None):
         return
 
     use_sort = resolve_sort(config)
+    print(f"  Sort: {'natural' if use_sort else 'none'}")
 
     def collect_images(folder):
-        all_items = sorted(folder.iterdir(), key=lambda x: natural_sort_key(x.name))
+        all_items = sorted(folder.iterdir(), key=lambda x: natural_sort_key(x.name)) if use_sort else list(
+            folder.iterdir())
         images = []
         skipped = []
         for item in all_items:
@@ -709,12 +712,10 @@ def combine_image_sets(config, cancel=None):
                 sub_imgs, sub_skip = collect_images(item)
                 images.extend(sub_imgs)
                 skipped.extend(sub_skip)
-        if use_sort:
-            images = sorted(images, key=lambda x: natural_sort_key(x.name))
         return images, skipped
 
     folders = sorted([f for f in src.iterdir() if f.is_dir()],
-                     key=lambda x: natural_sort_key(x.name))
+                     key=lambda x: natural_sort_key(x.name)) if use_sort else [f for f in src.iterdir() if f.is_dir()]
 
     if not folders:
         print("  No folders found in Input!")
@@ -1009,6 +1010,7 @@ def pdf_combiner(config, cancel=None):
         return
 
     use_sort = resolve_sort(config)
+    print(f"  Sort: {'natural' if use_sort else 'none'}")
 
     all_files = list(src.rglob("*"))
     pdfs = []
