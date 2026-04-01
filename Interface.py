@@ -130,7 +130,7 @@ class App:
         "Status":             "Shows what is currently in the Input and Output folders.",
         "Clear Log":          "Clears the log display.",
         "Clear Output":       "Deletes everything in the Output folder.",
-        "Cancel Job":         "Cancels the currently running job.",
+        "Cancel Operation":         "Cancels the currently running job.",
         "Open Input":         "Opens the input folder in Finder/Explorer.",
         "Open Output":        "Opens the output folder in Finder/Explorer and prints the path to the log.",
     }
@@ -231,26 +231,11 @@ class App:
 
     def _update_button_states(self):
         t = self._theme()
-        configured = self._is_configured()
-
-        for label, lbl in self._btn_labels.items():
-            try:
-                if label == "Add Input":
-                    current = lbl.cget("text")
-                    prefix = "▼ " if current.startswith("▼") else "▶ " if current.startswith("▶") else ""
-                    if not configured:
-                        if "⚠" not in current:
-                            lbl.configure(text=f"{prefix}⚠ Add Input")
-                    else:
-                        lbl.configure(text=f"{prefix}Add Input")
-            except tk.TclError:
-                pass
 
         if not self.config.get("guide_empty_input", True):
             for label, lbl in self._btn_labels.items():
                 try:
-                    if not label.startswith("⚠ "):
-                        lbl.configure(fg=t["fg"], bg=t["bg"])
+                    lbl.configure(fg=t["fg"], bg=t["bg"])
                 except tk.TclError:
                     pass
             return
@@ -314,7 +299,7 @@ class App:
             hint = "  (Enter = Files  •  Space = Folder  •  Escape = Cancel)"
         else:
             continue_key = self.config.get("hotkey_continue", "Return")
-            cancel_key   = self.config.get("hotkey_cancel", "Delete")
+            cancel_key   = self.config.get("hotkey_cancel", "Escape")
             hint = f"  ({continue_key} = confirm  •  {cancel_key} = cancel)"
 
         tk.Label(self._input_frame, text=hint, fg=t["hint_fg"],
@@ -342,7 +327,7 @@ class App:
             entry.bind("<Escape>", cancel)
         else:
             continue_key = self.config.get("hotkey_continue", "Return")
-            cancel_key   = self.config.get("hotkey_cancel", "Delete")
+            cancel_key   = self.config.get("hotkey_cancel", "Escape")
 
             def confirm(e=None):
                 val = var.get()
@@ -451,7 +436,7 @@ class App:
         h2("Clear Output")
         body("Clears the output folder.")
         gap()
-        h2("Cancel Job")
+        h2("Cancel Operation")
         body("Cancels the currently running job.")
         gap()
         h2("Open Output")
@@ -693,7 +678,7 @@ class App:
                 ("Clear Log",    self.clear_log),
                 ("Open Output",  self.open_output),
                 ("Clear Output", self.clear_output),
-                ("Cancel Job",   self.cancel_job),
+                ("Cancel Operation",   self.cancel_job),
             ]),
         ]
 
@@ -735,7 +720,7 @@ class App:
             ("Clear Log",    self.clear_log),
             ("Open Output",  self.open_output),
             ("Clear Output", self.clear_output),
-            ("Cancel Job",   self.cancel_job),
+            ("Cancel Operation",   self.cancel_job),
         ]:
             self._make_button(self._btn_frame, label, cmd, tooltip=self.TOOLTIPS.get(label))
 
