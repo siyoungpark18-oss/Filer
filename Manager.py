@@ -251,12 +251,12 @@ def _get_log_section_fns():
     return lambda header: None, lambda: None
 
 
-def _get_working_folders(src):
+def _get_working_folders(src, use_sort=True):
     top = sorted([f for f in src.iterdir() if f.is_dir()],
-                 key=lambda x: natural_sort_key(x.name))
+                 key=lambda x: natural_sort_key(x.name)) if use_sort else [f for f in src.iterdir() if f.is_dir()]
     if len(top) == 1:
         sub = sorted([f for f in top[0].iterdir() if f.is_dir()],
-                     key=lambda x: natural_sort_key(x.name))
+                     key=lambda x: natural_sort_key(x.name)) if use_sort else [f for f in top[0].iterdir() if f.is_dir()]
         if sub:
             print(f"  Found 1 top-level folder '{top[0].name}' — operating on its {len(sub)} subfolder(s).")
             return sub
@@ -318,7 +318,6 @@ def folders_to_pdf(config, cancel=None):
             print(f"  [{folder.name}]  {len(paths)} image(s)"
                   + (f"  {len(skipped)} skipped" if skipped else ""))
 
-
         print(f"  Total: {len(all_paths)} images across {len(folders)} folders")
 
         if all_paths:
@@ -340,8 +339,6 @@ def folders_to_pdf(config, cancel=None):
                 _print_summary(skipped=all_skipped)
             print("")
 
-
-
     else:
         total_converted = 0
         total_skipped = []
@@ -356,10 +353,9 @@ def folders_to_pdf(config, cancel=None):
                 key=lambda x: natural_sort_key(x.name)
             ) if use_sort else [f for f in folder.iterdir() if f.is_dir()]
             units = subfolders if subfolders else [folder]
-            # ── scan phase (inside collapsible) ──────────────────────────────
             start_section(f"[{folder.name}]")
             folder_skipped = []
-            unit_data = []  # list of (unit, paths, skipped)
+            unit_data = []
             for unit in units:
                 paths, skipped = collect_image_paths(unit, IMAGE_EXTENSIONS, sub_print=print, use_sort=use_sort)
                 folder_skipped.extend(skipped)
@@ -370,7 +366,6 @@ def folders_to_pdf(config, cancel=None):
             skip_total = f"  {len(folder_skipped)} skipped" if folder_skipped else ""
             print(f"  [{folder.name}]  {total_img} image(s){skip_total}")
             end_section()
-            # ── convert phase (outside collapsible) ──────────────────────────
             for unit, paths, skipped in unit_data:
                 if not paths:
                     continue
@@ -390,6 +385,7 @@ def folders_to_pdf(config, cancel=None):
         do_auto_clear(config)
         print(f"  Done! → {out}")
         print("")
+
 
 def images_to_pdf(config, cancel=None):
     src = get_input(config)
@@ -417,7 +413,9 @@ def images_to_pdf(config, cancel=None):
         else:
             skipped.append((f, "unsupported type"))
 
-    if resolve_sort(config):
+    use_sort = resolve_sort(config)
+    print(f"  Sort: {'natural' if use_sort else 'none'}")
+    if use_sort:
         image_files = sorted(image_files,
                              key=lambda x: natural_sort_key(str(x.relative_to(src))))
 
@@ -464,7 +462,9 @@ def folder_renamer(config, cancel=None):
     if not _check_disk_space(out, config):
         return
 
-    folders = _get_working_folders(src)
+    use_sort = resolve_sort(config)
+    print(f"  Sort: {'natural' if use_sort else 'none'}")
+    folders = _get_working_folders(src, use_sort)
 
     if not folders:
         print("  No folders found in Input!")
@@ -507,24 +507,18 @@ def folder_renamer(config, cancel=None):
         for f in folders:
             preview.append((f, out / f.name.replace(param1, param2)))
     elif mode == "extract number":
-        def collect(folder, dest_parent):
-            subfolders = sorted([f for f in folder.iterdir() if f.is_dir()],
-                                key=lambda x: natural_sort_key(x.name))
-            for sub in subfolders:
-                match = re.search(r'\d+(?:\.\d+)?', sub.name)
-                if match:
-                    raw = match.group()
-                    if '.' in raw:
-                        integer, decimal = raw.split('.', 1)
-                        new_name = f"{int(integer)}.{decimal}"
-                    else:
-                        new_name = str(int(raw))
-                    preview.append((sub, dest_parent / new_name))
-                else:
-                    skipped.append((sub, "no number found"))
-                    collect(sub, dest_parent / sub.name)
         for folder in folders:
-            collect(folder, out)
+            match = re.search(r'\d+(?:\.\d+)?', folder.name)
+            if match:
+                raw = match.group()
+                if '.' in raw:
+                    integer, decimal = raw.split('.', 1)
+                    new_name = f"{int(integer)}.{decimal}"
+                else:
+                    new_name = str(int(raw))
+                preview.append((folder, out / new_name))
+            else:
+                skipped.append((folder, "no number found"))
     else:
         print("  Invalid mode.")
         print("")
@@ -564,7 +558,6 @@ def folder_renamer(config, cancel=None):
         except Exception as e:
             failed.append((old, str(e)))
 
-
     _print_summary(copied=copied, failed=failed if failed else None,
                    skipped=skipped if skipped else None, label="renamed")
     do_auto_clear(config)
@@ -587,7 +580,9 @@ def file_renamer(config, cancel=None):
         return
 
     items = [f for f in src.rglob("*") if f.is_file()]
-    if resolve_sort(config):
+    use_sort = resolve_sort(config)
+    print(f"  Sort: {'natural' if use_sort else 'none'}")
+    if use_sort:
         items = sorted(items, key=lambda x: natural_sort_key(x.name))
 
     if not items:
@@ -673,7 +668,6 @@ def file_renamer(config, cancel=None):
         except Exception as e:
             failed.append((old, str(e)))
 
-
     _print_summary(copied=copied, failed=failed if failed else None, label="renamed")
     do_auto_clear(config)
     print(f"  Done! → {out}")
@@ -698,8 +692,7 @@ def combine_image_sets(config, cancel=None):
     print(f"  Sort: {'natural' if use_sort else 'none'}")
 
     def collect_images(folder):
-        all_items = sorted(folder.iterdir(), key=lambda x: natural_sort_key(x.name)) if use_sort else list(
-            folder.iterdir())
+        all_items = sorted(folder.iterdir(), key=lambda x: natural_sort_key(x.name)) if use_sort else list(folder.iterdir())
         images = []
         skipped = []
         for item in all_items:
@@ -724,7 +717,6 @@ def combine_image_sets(config, cancel=None):
 
     print(f"  Found {len(folders)} top-level folder(s). Scanning...")
 
-
     counter = 1
     total_skipped = []
     total_failed = []
@@ -738,7 +730,7 @@ def combine_image_sets(config, cancel=None):
             return
         throttle_if_needed(config)
         subfolders = sorted([f for f in folder.iterdir() if f.is_dir()],
-                            key=lambda x: natural_sort_key(x.name))
+                            key=lambda x: natural_sort_key(x.name)) if use_sort else [f for f in folder.iterdir() if f.is_dir()]
         targets = [(f"{sub.name}", sub) for sub in subfolders] if subfolders else [(folder.name, folder)]
 
         start_section(f"[{folder.name}]")
@@ -812,7 +804,10 @@ def image_converter(config, cancel=None):
         else:
             skipped.append((f, "unsupported type"))
 
-    images = sorted(images, key=lambda x: natural_sort_key(x.name))
+    use_sort = resolve_sort(config)
+    print(f"  Sort: {'natural' if use_sort else 'none'}")
+    if use_sort:
+        images = sorted(images, key=lambda x: natural_sort_key(x.name))
 
     if not images:
         print("  No images found in Input!")
@@ -872,7 +867,6 @@ def image_converter(config, cancel=None):
             except Exception as e:
                 failed.append((img_path, str(e)))
 
-
     _print_summary(copied=converted + copied, failed=failed if failed else None,
                    skipped=skipped if skipped else None, label="converted")
     do_auto_clear(config)
@@ -905,6 +899,11 @@ def find_duplicates(config, cancel=None):
         else:
             skipped.append((f, "unsupported type"))
 
+    use_sort = resolve_sort(config)
+    print(f"  Sort: {'natural' if use_sort else 'none'}")
+    if use_sort:
+        all_files = sorted(all_files, key=lambda x: natural_sort_key(x.name))
+
     print(f"  Hashing {len(all_files)} image(s)...")
 
     file_digests = {}
@@ -925,7 +924,6 @@ def find_duplicates(config, cancel=None):
                 hashes[digest] = f
         except Exception as e:
             hash_failed.append((f, str(e)))
-
 
     if not duplicates:
         print(f"  No duplicates found across {len(all_files)} images.")
@@ -986,7 +984,6 @@ def find_duplicates(config, cancel=None):
             failed.append((f, str(e)))
         except Exception as e:
             failed.append((f, str(e)))
-
 
     _print_summary(copied=copied, failed=failed if failed else None,
                    skipped=skipped if skipped else None, label="copied")
@@ -1051,7 +1048,6 @@ def pdf_combiner(config, cancel=None):
             print(f"  [{pdf_path.name}]  {len(reader.pages)} page(s)  (running total: {total_pages})")
         except Exception as e:
             failed.append((pdf_path, str(e)))
-
 
     try:
         out_path = out / "combined.pdf"
@@ -1129,7 +1125,10 @@ def pdf_to_images(config, cancel=None):
         else:
             skipped.append((f, "not a PDF"))
 
-    pdfs = sorted(pdfs, key=lambda x: natural_sort_key(x.name))
+    use_sort = resolve_sort(config)
+    print(f"  Sort: {'natural' if use_sort else 'none'}")
+    if use_sort:
+        pdfs = sorted(pdfs, key=lambda x: natural_sort_key(x.name))
 
     if not pdfs:
         print("  No PDFs found in Input!")
@@ -1138,7 +1137,6 @@ def pdf_to_images(config, cancel=None):
         print("")
         return
 
-    # Pre-count total pages for progress
     total_page_count = 0
     for pdf_path in pdfs:
         try:
@@ -1209,10 +1207,13 @@ def pdf_splitter(config, cancel=None):
         return
     print(f"  Note: cannot be cancelled once PDF conversion starts.")
 
+    use_sort = resolve_sort(config)
+    print(f"  Sort: {'natural' if use_sort else 'none'}")
     pdfs = sorted(
         [f for f in src.rglob("*") if f.is_file() and f.suffix.lower() == ".pdf"],
         key=lambda x: natural_sort_key(x.name)
-    )
+    ) if use_sort else [f for f in src.rglob("*") if f.is_file() and f.suffix.lower() == ".pdf"]
+
     if not pdfs:
         print("  No PDF found in Input!")
         print("")
@@ -1287,7 +1288,6 @@ def pdf_splitter(config, cancel=None):
             failed.append((pdf_path, f"part {i+1}: {e}"))
         except Exception as e:
             failed.append((pdf_path, f"part {i+1}: {e}"))
-
 
     _print_summary(copied=written, failed=failed if failed else None, label="parts saved")
     do_auto_clear(config)
