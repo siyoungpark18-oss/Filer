@@ -359,7 +359,12 @@ class App:
         def gap():   text.insert(tk.END, "\n")
 
         h1("Tankobon")
+        body("Controls")
         gap()
+        body("☀ to switch between light and dark mode")
+        body("? for help")
+        body("i for documentation and resources")
+        body("≡ for settings")
         body("For Information on specific tools or preferences, hover over the 'i' tooltips")
         body("Tankobon is a file manager.")
         body("To be more specific, it's specialized for image management en masse. It's meant to manage, convert, and compress folders with images or individual images in the thousands at a time and to do this with speed.")
@@ -545,11 +550,13 @@ class App:
                 lbl.configure(text=text_or_var)
             lbl.pack()
 
-            def on_click(e):
-                if getattr(self, '_last_click', 0) == id(cmd):
+            _clicked = {"v": False}
+
+            def on_click(e, _clicked=_clicked):
+                if _clicked["v"]:
                     return "break"
-                self._last_click = id(cmd)
-                self.root.after(300, lambda: setattr(self, '_last_click', None))
+                _clicked["v"] = True
+                self.root.after(100, lambda: _clicked.update({"v": False}))
                 cmd()
                 return "break"
 
@@ -908,11 +915,12 @@ class App:
         if job_name != "Add Input" and self.config.get("show_timestamps", True):
             from datetime import datetime
             font_size = self._log_font_size
-            line_len  = max(10, int(55 - (font_size - 7) * 2.5))
+            line_len = max(10, int(55 - (font_size - 7) * 2.5))
             timestamp = datetime.now().strftime("%H:%M:%S")
             self.log.configure(state='normal')
             self.log.tag_configure("ts_dim", foreground=self._theme()["log_dim"])
-            self.log.insert(tk.END, f"\n{timestamp}\n{'─' * line_len}\n\n", ("ts_dim",))
+            prefix = "\n" if self.config.get("log_blank_lines", True) else ""
+            self.log.insert(tk.END, f"{prefix}{timestamp}\n{'─' * line_len}\n\n", ("ts_dim",))
             self.log.see(tk.END)
             self.log.configure(state='disabled')
 
