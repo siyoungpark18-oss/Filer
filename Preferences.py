@@ -37,6 +37,7 @@ PREF_TIPS = {
     "hotkey_cancel":              "The key you press to cancel in the log prompt. Primarily used in Classic Mode.\n Not all Operations can be canceled consistently once they are running.",
     "throttle_cpu":               "Throttles the Operation if CPU usage exceeds the threshold.\n If your computer already exceeds this limit, it will throttle until it drops below it.\n 0 removes the limit, and can cause you're computer to crash.",
     "throttle_mem":               "Throttles the Operation if RAM usage exceeds the threshold.\n If your computer already exceeds this limit, it will throttle until it drops below it.\n 0 removes the limit, and can cause you're computer to crash.",
+    "log_blank_lines":            "Double spaces most text in the log.\nDisable for a more compact log.",
 }
 
 KEY_LABELS = {
@@ -148,11 +149,11 @@ def show_preferences(app):
         lbl.bind("<Leave>", lambda e: lbl.configure(bg=t["bg"]))
         return lbl
 
-    def _info_btn(parent, row, key, tips_dict):
+    def _info_btn(parent, row, key, tips_dict, col=2):
         if key in tips_dict and app.config.get("show_tooltips", True):
             info = tk.Label(parent, text="i", bg=t["bg"], fg=t["hint_fg"],
                             font=('', 9), cursor="hand2", padx=2)
-            info.grid(row=row, column=2, sticky='w')
+            info.grid(row=row, column=col, sticky='w')
             info.bind("<Enter>", lambda e, w=info, txt=tips_dict[key]: (
                 w.configure(bg=t["hover"]), app._show_tooltip_popup(w, txt, force_light=True)))
             info.bind("<Leave>", lambda e, w=info: (
@@ -198,6 +199,7 @@ def show_preferences(app):
     # ── GENERAL / TOOLS / HOTKEYS / THROTTLE tabs ──────────────────────────
     general_fields = [
         ("ui_mode",               "UI Mode",                        "combo", ["classic", "dropdown"]),
+        ("log_blank_lines",       "Double Space in Log",            "check", None),
         ("allow_concurrent_jobs", "Concurrent Operations",          "check", None),
         ("auto_clear_input",      "Clear Input after Operation",    "check", None),
         ("ask_run_name",          "Run Name",                       "check", None),
@@ -376,7 +378,7 @@ def show_preferences(app):
             val = v.get()
             if key in ("auto_clear_input", "replace_output", "sort_output",
                        "guide_empty_input", "show_tooltips", "allow_concurrent_jobs",
-                       "log_default_expanded", "show_timestamps", "open_output_recent"):
+                       "log_default_expanded", "show_timestamps", "open_output_recent, log_blank_lines"):
                 app.config[key] = bool(val)
             elif key in ("throttle_cpu", "throttle_mem"):
                 app.config[key] = int(str(val).split()[0])
