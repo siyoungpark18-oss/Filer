@@ -40,6 +40,8 @@ DEFAULTS = {
     "show_timestamps":           True,
     "open_output_recent":        False,
     "first_launch":              True,
+    "log_blank_lines":           False,
+
 }
 
 #FUNCTIONS——————————————————————————————————————————————————————————————————————————————————————————————————
