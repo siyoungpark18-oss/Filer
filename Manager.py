@@ -14,7 +14,7 @@ from pypdf import PdfReader, PdfWriter
 #PATHS————————————————————————————————————————————————————————————————————————————————————————————————————
 CONFIG_PATH = Path.home() / ".file_folder_manager" / "config.json"
 
-IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'}
+IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff',}
 
 SENTINEL = "\x00CANCELLED\x00"
 
@@ -331,7 +331,7 @@ def folders_to_pdf(config, cancel=None):
                     print("")
                     return
                 raise
-            _print_summary(copied=len(all_paths), skipped=all_skipped if all_skipped else None, label="converted")
+            _print_summary(copied=len(all_paths), skipped=all_skipped or None, label="converted")
             do_auto_clear(config)
             print(f"  Done! → {out}")
             print("")
@@ -383,7 +383,7 @@ def folders_to_pdf(config, cancel=None):
                         return
                     print(f"  Failed to save {safe_name}.pdf: {e}")
             total_skipped.extend(folder_skipped)
-        _print_summary(copied=total_converted, skipped=total_skipped if total_skipped else None, label="PDFs saved")
+        _print_summary(copied=total_converted, skipped=total_skipped or None, label="PDFs saved")
         do_auto_clear(config)
         print(f"  Done! → {out}")
         print("")
@@ -444,7 +444,7 @@ def images_to_pdf(config, cancel=None):
             print("")
             return
         raise
-    _print_summary(copied=len(image_files), skipped=skipped if skipped else None, label="converted")
+    _print_summary(copied=len(image_files), skipped=skipped or None, label="converted")
     do_auto_clear(config)
     print(f"  Done! → {out}")
     print("")
@@ -552,16 +552,16 @@ def folder_renamer(config, cancel=None):
         except OSError as e:
             if _is_no_space(e):
                 print(f"  ✖ Disk full after {copied} folder(s). Stopping.")
-                _print_summary(copied=copied, failed=failed if failed else None,
-                               skipped=skipped if skipped else None, label="renamed")
+                _print_summary(copied=copied, failed=failed or None,
+                               skipped=skipped or None, label="renamed")
                 print("")
                 return
             failed.append((old, str(e)))
         except Exception as e:
             failed.append((old, str(e)))
 
-    _print_summary(copied=copied, failed=failed if failed else None,
-                   skipped=skipped if skipped else None, label="renamed")
+    _print_summary(copied=copied, failed=failed or None,
+                   skipped=skipped or None, label="renamed")
     do_auto_clear(config)
     print(f"  Done! → {out}")
     print("")
@@ -663,14 +663,14 @@ def file_renamer(config, cancel=None):
         except OSError as e:
             if _is_no_space(e):
                 print(f"  ✖ Disk full after {copied} file(s). Stopping.")
-                _print_summary(copied=copied, failed=failed if failed else None, label="renamed")
+                _print_summary(copied=copied, failed=failed or None, label="renamed")
                 print("")
                 return
             failed.append((old, str(e)))
         except Exception as e:
             failed.append((old, str(e)))
 
-    _print_summary(copied=copied, failed=failed if failed else None, label="renamed")
+    _print_summary(copied=copied, failed=failed or None, label="renamed")
     do_auto_clear(config)
     print(f"  Done! → {out}")
     print("")
@@ -749,8 +749,8 @@ def combine_image_sets(config, cancel=None):
                     if _is_no_space(e):
                         end_section()
                         print(f"  ✖ Disk full after {counter - 1} image(s). Stopping.")
-                        _print_summary(copied=counter - 1, failed=total_failed if total_failed else None,
-                                       skipped=total_skipped if total_skipped else None, label="combined")
+                        _print_summary(copied=counter - 1, failed=total_failed or None,
+                                       skipped=total_skipped or None, label="combined")
                         print("")
                         return
                     total_failed.append((img, str(e)))
@@ -759,8 +759,8 @@ def combine_image_sets(config, cancel=None):
             print(f"    [{label}]  {len(images)} image(s)  →  {str(start_idx).zfill(4)}–{str(counter - 1).zfill(4)}")
         end_section()
 
-    _print_summary(copied=counter - 1, failed=total_failed if total_failed else None,
-                   skipped=total_skipped if total_skipped else None, label="combined")
+    _print_summary(copied=counter - 1, failed=total_failed or None,
+                   skipped=total_skipped or None, label="combined")
     do_auto_clear(config)
     print(f"  Total: {counter - 1} images combined.")
     print(f"  Done! → {out}")
@@ -794,14 +794,14 @@ def image_converter(config, cancel=None):
     if not _check_disk_space(out, config):
         return
 
-    image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp'}
+    converter_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp'}
     all_files = list(src.rglob("*"))
     images = []
     skipped = []
     for f in all_files:
         if not f.is_file():
             continue
-        if f.suffix.lower() in image_extensions:
+        if f.suffix.lower() in converter_extensions:
             images.append(f)
         else:
             skipped.append((f, "unsupported type"))
@@ -844,8 +844,8 @@ def image_converter(config, cancel=None):
             except OSError as e:
                 if _is_no_space(e):
                     print(f"  ✖ Disk full after {converted + copied} image(s). Stopping.")
-                    _print_summary(copied=converted + copied, failed=failed if failed else None,
-                                   skipped=skipped if skipped else None, label="converted")
+                    _print_summary(copied=converted + copied, failed=failed or None,
+                                   skipped=skipped or None, label="converted")
                     print("")
                     return
                 failed.append((img_path, str(e)))
@@ -861,16 +861,16 @@ def image_converter(config, cancel=None):
             except OSError as e:
                 if _is_no_space(e):
                     print(f"  ✖ Disk full after {converted + copied} image(s). Stopping.")
-                    _print_summary(copied=converted + copied, failed=failed if failed else None,
-                                   skipped=skipped if skipped else None, label="converted")
+                    _print_summary(copied=converted + copied, failed=failed or None,
+                                   skipped=skipped or None, label="converted")
                     print("")
                     return
                 failed.append((img_path, str(e)))
             except Exception as e:
                 failed.append((img_path, str(e)))
 
-    _print_summary(copied=converted + copied, failed=failed if failed else None,
-                   skipped=skipped if skipped else None, label="converted")
+    _print_summary(copied=converted + copied, failed=failed or None,
+                   skipped=skipped or None, label="converted")
     do_auto_clear(config)
     print(f"  Done! → {out}")
     print("")
@@ -929,8 +929,8 @@ def find_duplicates(config, cancel=None):
 
     if not duplicates:
         print(f"  No duplicates found across {len(all_files)} images.")
-        _print_summary(copied=len(all_files), failed=hash_failed if hash_failed else None,
-                       skipped=skipped if skipped else None, label="scanned")
+        _print_summary(copied=len(all_files), failed=hash_failed or None,
+                       skipped=skipped or None, label="scanned")
         print("")
         return
 
@@ -955,8 +955,8 @@ def find_duplicates(config, cancel=None):
         print("")
         return
 
-    import sys
-    log = sys.stdout
+    import sys as _sys
+    log = _sys.stdout
     start_section, end_section = _get_log_section_fns()
     start_section(f"  Excluding ({len(exclude)}) — expand and hover over filenames to preview")
     for f in sorted(exclude, key=lambda x: natural_sort_key(x.name)):
@@ -979,16 +979,16 @@ def find_duplicates(config, cancel=None):
         except OSError as e:
             if _is_no_space(e):
                 print(f"  ✖ Disk full after {copied} image(s). Stopping.")
-                _print_summary(copied=copied, failed=failed if failed else None,
-                               skipped=skipped if skipped else None, label="copied")
+                _print_summary(copied=copied, failed=failed or None,
+                               skipped=skipped or None, label="copied")
                 print("")
                 return
             failed.append((f, str(e)))
         except Exception as e:
             failed.append((f, str(e)))
 
-    _print_summary(copied=copied, failed=failed if failed else None,
-                   skipped=skipped if skipped else None, label="copied")
+    _print_summary(copied=copied, failed=failed or None,
+                   skipped=skipped or None, label="copied")
     do_auto_clear(config)
     print(f"  Done! → {out}")
     print("")
@@ -1064,8 +1064,8 @@ def pdf_combiner(config, cancel=None):
             return
         raise
 
-    _print_summary(copied=len(pdfs) - len(failed), failed=failed if failed else None,
-                   skipped=skipped if skipped else None, label="combined")
+    _print_summary(copied=len(pdfs) - len(failed), failed=failed or None,
+                   skipped=skipped or None, label="combined")
     do_auto_clear(config)
     print(f"  Done! → {out}")
     print("")
@@ -1176,8 +1176,8 @@ def pdf_to_images(config, cancel=None):
             except OSError as e:
                 if _is_no_space(e):
                     print(f"  ✖ Disk full after {total_pages + i} page(s). Stopping.")
-                    _print_summary(copied=total_pages + i, failed=failed if failed else None,
-                                   skipped=skipped if skipped else None, label="pages exported")
+                    _print_summary(copied=total_pages + i, failed=failed or None,
+                                   skipped=skipped or None, label="pages exported")
                     print("")
                     return
                 failed.append((pdf_path, f"page {i+1}: {e}"))
@@ -1186,8 +1186,8 @@ def pdf_to_images(config, cancel=None):
         total_pages += page_count
         print(f"  [{pdf_path.name}]  {page_count} page(s)  →  {pdf_out.name}/")
 
-    _print_summary(copied=total_pages, failed=failed if failed else None,
-                   skipped=skipped if skipped else None, label="pages exported")
+    _print_summary(copied=total_pages, failed=failed or None,
+                   skipped=skipped or None, label="pages exported")
     do_auto_clear(config)
     print(f"  Total: {len(pdfs)} PDF(s), {total_pages} page(s) exported.")
     print(f"  Done! → {out}")
@@ -1284,14 +1284,14 @@ def pdf_splitter(config, cancel=None):
         except OSError as e:
             if _is_no_space(e):
                 print(f"  ✖ Disk full after {written} part(s). Stopping.")
-                _print_summary(copied=written, failed=failed if failed else None, label="parts saved")
+                _print_summary(copied=written, failed=failed or None, label="parts saved")
                 print("")
                 return
             failed.append((pdf_path, f"part {i+1}: {e}"))
         except Exception as e:
             failed.append((pdf_path, f"part {i+1}: {e}"))
 
-    _print_summary(copied=written, failed=failed if failed else None, label="parts saved")
+    _print_summary(copied=written, failed=failed or None, label="parts saved")
     do_auto_clear(config)
     print(f"  Done! {written} part(s) saved.")
     print(f"  → {out}")
