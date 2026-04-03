@@ -859,7 +859,6 @@ class App:
 
     # ── job running ───────────────────────────────────────────────────────────
 
-    @property
     def _tool_fns(self):
         return {
             "Folders to PDF":     lambda: folders_to_pdf(self.config, self.cancel_event),
@@ -876,7 +875,8 @@ class App:
         }
 
     def _inject_and_run(self, run_fn, choice, job_name):
-        direct_fn = self._tool_fns.get(job_name)
+        tool_fns = self._tool_fns()
+        direct_fn = tool_fns.get(job_name)
         if direct_fn is None:
             self._run(run_fn, job_name=job_name)
             return
@@ -888,9 +888,9 @@ class App:
         config_key = self.TOOL_MODE_CONFIG_KEY.get(job_name) if choice is not None else None
 
         if config_key:
-            original     = self.config.get(config_key)
+            original    = self.config.get(config_key)
             self.config[config_key] = choice
-            fn_snapshot  = self._tool_fns[job_name]
+            fn_snapshot = tool_fns[job_name]
 
             def run_with_restore():
                 try:
@@ -919,7 +919,7 @@ class App:
             timestamp = datetime.now().strftime("%H:%M:%S")
             self.log.configure(state='normal')
             self.log.tag_configure("ts_dim", foreground=self._theme()["log_dim"])
-            prefix = "\n" if self.config.get("log_blank_lines", True) else ""
+            prefix = "\n" if self.config.get("log_blank_lines", False) else ""
             self.log.insert(tk.END, f"{prefix}{timestamp}\n{'─' * line_len}\n\n", ("ts_dim",))
             self.log.see(tk.END)
             self.log.configure(state='disabled')
@@ -987,6 +987,16 @@ class App:
                 print(f"Failed to delete {item.name}: {e}")
         print("Input cleared.")
 
+    @staticmethod
+    def _open_folder(path):
+        import subprocess
+        if sys.platform == "darwin":
+            subprocess.Popen(["open", str(path)])
+        elif sys.platform == "win32":
+            subprocess.Popen(["explorer", str(path)])
+        else:
+            subprocess.Popen(["xdg-open", str(path)])
+
     def open_input(self):
         input_dir = get_input(self.config)
         if not self.config.get("input", ""):
@@ -996,13 +1006,7 @@ class App:
             print(f"  Input folder does not exist yet: {input_dir}")
             return
         print(f"  Input: {input_dir}")
-        import subprocess, sys as _sys
-        if _sys.platform == "darwin":
-            subprocess.Popen(["open", str(input_dir)])
-        elif _sys.platform == "win32":
-            subprocess.Popen(["explorer", str(input_dir)])
-        else:
-            subprocess.Popen(["xdg-open", str(input_dir)])
+        self._open_folder(input_dir)
 
     def open_output(self):
         out_dir = Path(self.config.get("output", "")) / "output"
@@ -1024,13 +1028,7 @@ class App:
         else:
             print(f"  Output: {out_dir}")
 
-        import subprocess, sys as _sys
-        if _sys.platform == "darwin":
-            subprocess.Popen(["open", str(target)])
-        elif _sys.platform == "win32":
-            subprocess.Popen(["explorer", str(target)])
-        else:
-            subprocess.Popen(["xdg-open", str(target)])
+        self._open_folder(target)
 
     # ── file picking ──────────────────────────────────────────────────────────
 
