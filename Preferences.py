@@ -2,7 +2,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from pathlib import Path
-import re as re
+import re
 
 from Themes import THEMES
 
@@ -378,7 +378,7 @@ def show_preferences(app):
             val = v.get()
             if key in ("auto_clear_input", "replace_output", "sort_output",
                        "guide_empty_input", "show_tooltips", "allow_concurrent_jobs",
-                       "log_default_expanded", "show_timestamps", "open_output_recent, log_blank_lines"):
+                       "log_default_expanded", "show_timestamps", "open_output_recent", "log_blank_lines"):
                 app.config[key] = bool(val)
             elif key in ("throttle_cpu", "throttle_mem"):
                 app.config[key] = int(str(val).split()[0])
