@@ -12,7 +12,7 @@ import errno
 from pypdf import PdfReader, PdfWriter
 
 #PATHS————————————————————————————————————————————————————————————————————————————————————————————————————
-CONFIG_PATH = Path.home() / ".file_folder_manager" / "config.json"
+CONFIG_PATH = Path.home() / ".tankobon" / "config.json"
 
 IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff',}
 
