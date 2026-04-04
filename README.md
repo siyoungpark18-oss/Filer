@@ -55,9 +55,11 @@ i for documentation and resources
 ≡ for Preferences
 
 **Log**
-+ to Increase the size of Text in Log
-- to Decrease the size of Text in Log
-Use the Scrollbar to Scroll in the Log, and hit Clear Log to clear all of its contents
+to Increase the size of Text in Log, hit +
+
+to Decrease the size of Text in Log, hit -
+
+Use the Scrollbar to Scroll in the Log, and hit **Clear Log** to clear all of its contents
 <br>
 
 ## File System ##
