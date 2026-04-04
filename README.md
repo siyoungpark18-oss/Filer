@@ -24,19 +24,17 @@ Windows and Linux Builds will come shortly
 *Tankobon’s Advantage lies in sheer speed and scale.* 
 It can convert, re-organize, and combine **thousands of files in a matter of minutes to seconds. This is orders of magnitud faster than most browser based tools or applications.**
 -   *Tankobon does this by utilizing your local file system rather than requiring the user to upload files to an app or cloud. This is what allows the app to be entirely local.*
-<br>
-<br>
-<br>
+
+
 **Fear not! Tankbon does not modify you’re original files. The input and output folders all work off copies of each other or your original files, preventing any irreversible changes to your files.** 
 
 This means that Clearing the input and output will never permanently delete your original files. Thus, there is no undo button. 
-<br>
-<br>
+
 If you don’t like the output just redo it or remove it. Some features that make this easier are:
 - *open most recent output*—allows you to open the most recent output with open output, rather than the entire output folder. 
 - *replace output*—replaces old outputs with the most recent one. If you're current output is faulty, simply replace it with a new one with this setting.
 <br>
-
+<br>
 ## Setup ##
 When you first begin the program, **please set the directories for the Input and Output within your file system and give the application permissions to read/write files there for actual functionality**
 
