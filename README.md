@@ -42,11 +42,24 @@ When you first begin the program, **please set the directories for the Input and
 
 ### Poppler ###
 Poppler is not packaged in as of yet. Please install it yourself. The program should work overall even without it, but some tools will simply break. Poppler is a python dependency. some PDF functions will not work without it.
-
-
+<br>
+<br>
+<br>
 ## Controls ##
-To Create
-
+**Main Bar**
+☀ to switch between light and dark mode
+? for Help
+i for documentation and resources
+≡ for Preferences
+<br>
+**Log**
++ to Increase the size of Text in Log
+- to Decrease the size of Text in Log
+<br>
+Use the Scrollbar to Scroll in the Log, and hit Clear Log to clear all of its contents
+<br>
+<br>
+<br>
 ## File System ##
 ***The file system is organized into an Input and Output folder*** 
 The Input folder is where files are moved to for processing with the tools. *Files from the Input folder are copied from your file system*
@@ -59,37 +72,39 @@ The Output folder is where these files go to when they are processed. *Files fro
 <br>
 ## Intended Workflow ##
 For Tankobon, there is a rather clear cut intentional workflow that should be followed to use the program smoothly
-
+<br>
 1. Add Files to the Input folder with the **Add to Input** tool
 2. Use the **File and Folder Tools** to process the input. *The input is not modified in the proccess, so multiple processes can be done on with same input*
 3. Export the Output files and move them back into your file system using **Open Output**
 4. Once you are done with the current input, clear the input with **Clear Input**
-
+<br>
 Once you are done, add new files with **Add to Input** and continue the process. You can even add the current output with **From Output**
 <br>
 <br>
 <br>
 ## Input Controls ##
-
+Controls for the Input Folder
+<br>
 ***Add Input:*** Add files or **one folder**
-
+<br>
 ***Clear Input:*** Clears the current output of all of its contents
-
+<br>
 ***Open Output:*** Opens the input folder. Use this to check what specific files are in input
 <br>
 <br>
 <br>
 ## Utilities ##
-
+Other tools
+<br>
 ***Status:*** States whats in the input and output. Using the ▲ and ▼ buttons, you can expand the log dialogue to see what subfolders are inside. 
 *For conciseness, Status and other expandable tools only show subfolders and not individual files*
-
+<br>
 ***Clear Log:*** Clears the Log and all of its contents, including any expandable dialogue ( ▲ ▼ )
-
+<br>
 ***Open Output:*** Opens the Output folder. Use this tool as a shortcut to open the output folder and move files in it to your main file system. 
-
+<br>
 ***Clear Output:*** Clears the Output folder and all of its contents
-
+<br>
 ***Cancel Operation:*** Cancels the operation. For some operations this takes some time. 
 Cancel checks happen periodically so that the operations are held back.
 <br>
@@ -99,16 +114,17 @@ Cancel checks happen periodically so that the operations are held back.
 for all its speed, it has some pretty quirky limitations.
 - **Only 1 folder can be attached at a time!** *If you want to process folders at a time, move all of the folders into 1 main folder beforehand and attach that main folder.*
 If you have multiple folders of chapters you want to modify, simply put all chapters in one main folderand then you can attach that folder with its subfolders all at once. This is a known limitation and will eventually be changed
-
+<br>
 - In all processes the tool is capable of, **you cannot pick the files within the input that are to be processed.** It will process all of the files in the input automatically, and this is intentional. **To avoid processing unrelated folders or files, you should clear the input folder periodically when you’re done with the current files** in input and then add newer ones left to process. This is the intended workflow and prevents the program from having to constantly ask you what to process.
-
+<br>
 Everything in the input is simply processed in its entirity. And it is meant to be this way. Reference the Intended workflows to see how the workflow functions with it.
 <br>
 <br>
 <br>
 ## Throttle ##
-
+Limits to CPU and RAM Usage
+<br>
 *Under certain circumstances, Tankobon can easily cause your computer to freeze due to taking up all the ram and CPU on your computer.* **There is a throttle set by default that limits how much cpu and ram Tankobon can use to prevent this. The default is 80%**
-
+<br>
 ***If your comptuer is already using CPU or RAM above te throttle set, the tools will immediately pause, and appear as if they have not started!***
 <br>
