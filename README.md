@@ -40,7 +40,7 @@ If you don’t like the output just redo it or remove it. Some features that mak
 ## Setup ##
 When you first begin the program, **please set the directories for the Input and Output within your file system and give the application permissions to read/write files there for actual functionality**
 
-#### Poppler ####
+### Poppler ###
 
 Poppler is not packaged in as of yet. Please install it yourself. The program should work overall even without it, but some tools will simply break. Poppler is a python dependency. some PDF functions will not work without it.
 
