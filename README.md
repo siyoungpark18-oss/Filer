@@ -69,34 +69,26 @@ Once you are done, add new files with **Add to Input** and continue the process.
 
 ## Input Controls ##
 
-##### Add Input #####
-Add files or **one folder**
+***Add Input:*** Add files or **one folder**
 
-##### Clear Input #####
-Clears the current output of all of its contents
+***Clear Input:*** Clears the current output of all of its contents
 
-##### Open Input #####
-Opens the input folder. Use this to check what specific files are in input
+***Open Output:*** Opens the input folder. Use this to check what specific files are in input
 
 
 
 ## Utilities ##
 
-##### Status #####
-States whats in the input and output. Using the ▲ and ▼ buttons, you can expand the log dialogue to see what subfolders are inside. 
+***Status:*** States whats in the input and output. Using the ▲ and ▼ buttons, you can expand the log dialogue to see what subfolders are inside. 
 *For conciseness, Status and other expandable tools only show subfolders and not individual files*
 
-##### Clear Log #####
-Clears the Log and all of its contents, including any expandable dialogue ( ▲ ▼ )
+***Clear Log:*** Clears the Log and all of its contents, including any expandable dialogue ( ▲ ▼ )
 
-##### Open Output #####
-Opens the Output folder. Use this tool as a shortcut to open the output folder and move files in it to your main file system. 
+***Open Output:*** Opens the Output folder. Use this tool as a shortcut to open the output folder and move files in it to your main file system. 
 
-##### Clear Output #####
-Clears the Output folder and all of its contents
+***Clear Output:*** Clears the Output folder and all of its contents
 
-##### Cancel Operation #####
-Cancels the operation. For some operations this takes some time. 
+***Cancel Operation:*** Cancels the operation. For some operations this takes some time. 
 Cancel checks happen periodically so that the operations are held back.
 
 
