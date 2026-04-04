@@ -9,7 +9,7 @@ Rather than being a third party manga downloader, Tankobon is dedicated to Manga
 There is some setup involved. See **Setup**
 <br>
 <br>
-<br>
+
 ## To Open Tankobon ##
 *On Mac, use the resource here: https://docs.google.com/document/d/1NNl6HVrSsu0wnXz9jT7q-wDegnqZG6BhiFBO4z1ihXI/edit?tab=t.z2967vfkgxn2*
 *to download a .dmg file and open it like any other application. You will have to go through privacy and security sections to give MacOS permission to open it as I am not a registered developer* The alternative is installing it in the same way a Windows or Linux user would.
@@ -18,7 +18,7 @@ For Windows or Linux, download the zip right off of github and simply open Inter
 Windows and Linux Builds will come shortly
 <br>
 <br>
-<br>
+
 ## Why Use Tankobon? ##
 
 *Tankobon’s Advantage lies in sheer speed and scale.* 
@@ -43,21 +43,21 @@ When you first begin the program, **please set the directories for the Input and
 Poppler is not packaged in as of yet. Please install it yourself. The program should work overall even without it, but some tools will simply break. Poppler is a python dependency. some PDF functions will not work without it.
 <br>
 <br>
-<br>
+
 ## Controls ##
 **Main Bar**
 ☀ to switch between light and dark mode
 ? for Help
 i for documentation and resources
 ≡ for Preferences
-<br>
+
 **Log**
 + to Increase the size of Text in Log
 - to Decrease the size of Text in Log
 Use the Scrollbar to Scroll in the Log, and hit Clear Log to clear all of its contents
 <br>
 <br>
-<br>
+
 ## File System ##
 ***The file system is organized into an Input and Output folder*** 
 The Input folder is where files are moved to for processing with the tools. *Files from the Input folder are copied from your file system*
@@ -67,7 +67,7 @@ The Output folder is where these files go to when they are processed. *Files fro
 To export the processed files and move them back into your file system, use the **Open Output** Button
 <br>
 <br>
-<br>
+
 ## Intended Workflow ##
 For Tankobon, there is a rather clear cut intentional workflow that should be followed to use the program smoothly
 
@@ -79,7 +79,7 @@ For Tankobon, there is a rather clear cut intentional workflow that should be fo
 Once you are done, add new files with **Add to Input** and continue the process. You can even add the current output with **From Output**
 <br>
 <br>
-<br>
+
 ## Input Controls ##
 Controls for the Input Folder
 
@@ -90,7 +90,7 @@ Controls for the Input Folder
 ***Open Output:*** Opens the input folder. Use this to check what specific files are in input
 <br>
 <br>
-<br>
+
 ## Utilities ##
 Other tools
 ***Status:*** States whats in the input and output. Using the ▲ and ▼ buttons, you can expand the log dialogue to see what subfolders are inside. 
@@ -106,7 +106,7 @@ Other tools
 Cancel checks happen periodically so that the operations are held back.
 <br>
 <br>
-<br>
+
 ## Limitations ##
 for all its speed, it has some pretty quirky limitations.
 
@@ -118,7 +118,7 @@ If you have multiple folders of chapters you want to modify, simply put all chap
 Everything in the input is simply processed in its entirity. And it is meant to be this way. Reference the Intended workflows to see how the workflow functions with it.
 <br>
 <br>
-<br>
+
 ## Throttle ##
 Limits to CPU and RAM Usage
 
