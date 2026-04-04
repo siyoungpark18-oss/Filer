@@ -27,8 +27,7 @@ It can convert, re-organize, and combine **thousands of files in a matter of min
 <br>
 <br>
 <br>
-**Fear not! Tankbon does not modify you’re original files.**
-**The input and output folders all work off copies of each other or your original files, preventing any irreversible changes to your files.** 
+**Fear not! Tankbon does not modify you’re original files. The input and output folders all work off copies of each other or your original files, preventing any irreversible changes to your files.** 
 
 This means that Clearing the input and output will never permanently delete your original files. Thus, there is no undo button. 
 <br>
