@@ -63,6 +63,41 @@ For Tankobon, there is a rather clear cut intentional workflow that should be fo
 3. Export the Output files and move them back into your file system using **Open Output**
 4. Once you are done with the current input, clear the input with **Clear Input**
 
+Once you are done, add new files with **Add to Input** and continue the process. You can even add the current output with **From Output**
+
+
+
+## Input Controls ##
+
+##### Add Input #####
+Add files or **one folder**
+
+##### Clear Input #####
+Clears the current output of all of its contents
+
+##### Open Input #####
+Opens the input folder. Use this to check what specific files are in input
+
+
+
+## Utilities ##
+
+##### Status #####
+States whats in the input and output. Using the ▲ and ▼ buttons, you can expand the log dialogue to see what subfolders are inside. 
+*For conciseness, Status and other expandable tools only show subfolders and not individual files*
+
+##### Clear Log #####
+Clears the Log and all of its contents, including any expandable dialogue ( ▲ ▼ )
+
+##### Open Output #####
+Opens the Output folder. Use this tool as a shortcut to open the output folder and move files in it to your main file system. 
+
+##### Clear Output #####
+Clears the Output folder and all of its contents
+
+##### Cancel Operation #####
+Cancels the operation. For some operations this takes some time. 
+Cancel checks happen periodically so that the operations are held back.
 
 
 ## Limitations ##
