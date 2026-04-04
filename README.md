@@ -1,4 +1,4 @@
-#Tankobon.#
+# Tankobon. #
 
 Tankobon is a manga file manager. 
 It is Free, Open Source, Cross-platform, and Local that is made for personal computers. 
@@ -10,7 +10,7 @@ There is some setup involved. See **Setup**
 
 
 
-##To Open Tankobon##
+## To Open Tankobon ##
 *On Mac, use the resource here: https://docs.google.com/document/d/1NNl6HVrSsu0wnXz9jT7q-wDegnqZG6BhiFBO4z1ihXI/edit?tab=t.z2967vfkgxn2*
 *to download a .dmg file and open it like any other application. You will have to go through privacy and security sections to give MacOS permission to open it as I am not a registered developer* The alternative is installing it in the same way a Windows or Linux user would.
 
@@ -19,7 +19,7 @@ Windows and Linux Builds will come shortly
 
 
 
-##Why Use Tankobon?##
+## Why Use Tankobon? ##
 
 *Tankobon’s Advantage lies in sheer speed and scale.* 
 It can convert, re-organize, and combine **thousands of files in a matter of minutes to seconds. This is orders of magnitud faster than most browser based tools or applications.**
@@ -37,7 +37,7 @@ If you don’t like the output just redo it or remove it. Some features that mak
 - *replace output*—replaces old outputs with the most recent one. If you're current output is faulty, simply replace it with a new one with this setting.
 
 
-##Setup ##
+## Setup ##
 When you first begin the program, **please set the directories for the Input and Output within your file system and give the application permissions to read/write files there for actual functionality**
 
 ####Poppler####
@@ -45,7 +45,7 @@ When you first begin the program, **please set the directories for the Input and
 Poppler is not packaged in as of yet. Please install it yourself. The program should work overall even without it, but some tools will simply break. Poppler is a python dependency. some PDF functions will not work without it.
 
 
-##File System##
+## File System ##
 ***The file system is organized into an Input and Output folder*** 
 The Input folder is where files are moved to for processing with the tools. *Files from the Input folder are copied from your file system*
   Do this using the **Add to Input** Button
@@ -55,7 +55,7 @@ The Output folder is where these files go to when they are processed. *Files fro
 
 
 
-##Intended Workflow##
+## Intended Workflow ##
 For Tankobon, there is a rather clear cut intentional workflow that should be followed to use the program smoothly
 
 1. Add Files to the Input folder with the **Add to Input** tool
@@ -65,7 +65,7 @@ For Tankobon, there is a rather clear cut intentional workflow that should be fo
 
 
 
-##Limitations##
+## Limitations ##
 for all its speed, it has some pretty quirky limitations.
 - **Only 1 folder can be attached at a time!** *If you want to process folders at a time, move all of the folders into 1 main folder beforehand and attach that main folder.*
 If you have multiple folders of chapters you want to modify, simply put all chapters in one main folderand then you can attach that folder with its subfolders all at once. This is a known limitation and will eventually be changed
@@ -76,7 +76,7 @@ Everything in the input is simply processed in its entirity. And it is meant to 
 
 
 
-##Throttle##
+## Throttle ##
 
 *Under certain circumstances, Tankobon can easily cause your computer to freeze due to taking up all the ram and CPU on your computer.* **There is a throttle set by default that limits how much cpu and ram Tankobon can use to prevent this. The default is 80%**
 
