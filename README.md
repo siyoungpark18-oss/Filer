@@ -16,48 +16,48 @@ There is some setup involved. See **Setup**
 
 For Windows or Linux, download the zip right off of github and simply open Interface.py
 Windows and Linux Builds will come shortly
-
-
-
+<br>
+<br>
+<br>
 ## Why Use Tankobon? ##
 
 *Tankobon’s Advantage lies in sheer speed and scale.* 
 It can convert, re-organize, and combine **thousands of files in a matter of minutes to seconds. This is orders of magnitud faster than most browser based tools or applications.**
 -   *Tankobon does this by utilizing your local file system rather than requiring the user to upload files to an app or cloud. This is what allows the app to be entirely local.*
-
-
-
+<br>
+<br>
+<br>
 **Fear not! Tankbon does not modify you’re original files.** **The input and output folders all work off copies of each other or your original files, preventing any irreversible changes to your files.** 
 
 This means that Clearing the input and output will never permanently delete your original files. Thus, there is no undo button. 
-
-
+<br>
+<br>
 If you don’t like the output just redo it or remove it. Some features that make this easier are:
 - *open most recent output*—allows you to open the most recent output with open output, rather than the entire output folder. 
 - *replace output*—replaces old outputs with the most recent one. If you're current output is faulty, simply replace it with a new one with this setting.
-
-
+<br>
+<br>
 ## Setup ##
 When you first begin the program, **please set the directories for the Input and Output within your file system and give the application permissions to read/write files there for actual functionality**
-
+<br>
 ### Poppler ###
-
+<br>
 Poppler is not packaged in as of yet. Please install it yourself. The program should work overall even without it, but some tools will simply break. Poppler is a python dependency. some PDF functions will not work without it.
-
+<br>
 
 ## Controls ##
-
+To Create
 
 ## File System ##
 ***The file system is organized into an Input and Output folder*** 
 The Input folder is where files are moved to for processing with the tools. *Files from the Input folder are copied from your file system*
   Do this using the **Add to Input** Button
-
+<br>
 The Output folder is where these files go to when they are processed. *Files from the Output folder are copied from the Input folder with their modifications*
   To export the processed files and move them back into your file system, use the **Open Output** Button
-
-
-
+<br>
+<br>
+<br>
 ## Intended Workflow ##
 For Tankobon, there is a rather clear cut intentional workflow that should be followed to use the program smoothly
 
@@ -67,9 +67,9 @@ For Tankobon, there is a rather clear cut intentional workflow that should be fo
 4. Once you are done with the current input, clear the input with **Clear Input**
 
 Once you are done, add new files with **Add to Input** and continue the process. You can even add the current output with **From Output**
-
-
-
+<br>
+<br>
+<br>
 ## Input Controls ##
 
 ***Add Input:*** Add files or **one folder**
@@ -77,9 +77,9 @@ Once you are done, add new files with **Add to Input** and continue the process.
 ***Clear Input:*** Clears the current output of all of its contents
 
 ***Open Output:*** Opens the input folder. Use this to check what specific files are in input
-
-
-
+<br>
+<br>
+<br>
 ## Utilities ##
 
 ***Status:*** States whats in the input and output. Using the ▲ and ▼ buttons, you can expand the log dialogue to see what subfolders are inside. 
@@ -93,8 +93,9 @@ Once you are done, add new files with **Add to Input** and continue the process.
 
 ***Cancel Operation:*** Cancels the operation. For some operations this takes some time. 
 Cancel checks happen periodically so that the operations are held back.
-
-
+<br>
+<br>
+<br>
 ## Limitations ##
 for all its speed, it has some pretty quirky limitations.
 - **Only 1 folder can be attached at a time!** *If you want to process folders at a time, move all of the folders into 1 main folder beforehand and attach that main folder.*
@@ -103,11 +104,12 @@ If you have multiple folders of chapters you want to modify, simply put all chap
 - In all processes the tool is capable of, **you cannot pick the files within the input that are to be processed.** It will process all of the files in the input automatically, and this is intentional. **To avoid processing unrelated folders or files, you should clear the input folder periodically when you’re done with the current files** in input and then add newer ones left to process. This is the intended workflow and prevents the program from having to constantly ask you what to process.
 
 Everything in the input is simply processed in its entirity. And it is meant to be this way. Reference the Intended workflows to see how the workflow functions with it.
-
-
-
+<br>
+<br>
+<br>
 ## Throttle ##
 
 *Under certain circumstances, Tankobon can easily cause your computer to freeze due to taking up all the ram and CPU on your computer.* **There is a throttle set by default that limits how much cpu and ram Tankobon can use to prevent this. The default is 80%**
 
 ***If your comptuer is already using CPU or RAM above te throttle set, the tools will immediately pause, and appear as if they have not started!***
+<br>
