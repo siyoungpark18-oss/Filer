@@ -83,9 +83,9 @@ Controls for the Input Folder
 
 ***Add Input:*** Add files or **one folder**
 
-***Clear Input:*** Clears the current output of all of its contents
+***Clear Input:*** Clears the current input of all of its contents
 
-***Open Output:*** Opens the input folder. Use this to check what specific files are in input
+***Open Input:*** Opens the input folder. Use this to check what specific files are in input
 <br>
 <br>
 
