@@ -34,7 +34,6 @@ If you don’t like the output just redo it or remove it. Some features that mak
 - *open most recent output*—allows you to open the most recent output with open output, rather than the entire output folder. 
 - *replace output*—replaces old outputs with the most recent one. If you're current output is faulty, simply replace it with a new one with this setting.
 <br>
-<br>
 
 ## Setup ##
 When you first begin the program, **please set the directories for the Input and Output within your file system and give the application permissions to read/write files there for actual functionality**
@@ -55,7 +54,6 @@ i for documentation and resources
 + to Increase the size of Text in Log
 - to Decrease the size of Text in Log
 Use the Scrollbar to Scroll in the Log, and hit Clear Log to clear all of its contents
-<br>
 <br>
 
 ## File System ##
