@@ -36,14 +36,13 @@ If you don’t like the output just redo it or remove it. Some features that mak
 - *open most recent output*—allows you to open the most recent output with open output, rather than the entire output folder. 
 - *replace output*—replaces old outputs with the most recent one. If you're current output is faulty, simply replace it with a new one with this setting.
 <br>
-<br>
+
 ## Setup ##
 When you first begin the program, **please set the directories for the Input and Output within your file system and give the application permissions to read/write files there for actual functionality**
-<br>
+
 ### Poppler ###
-<br>
 Poppler is not packaged in as of yet. Please install it yourself. The program should work overall even without it, but some tools will simply break. Poppler is a python dependency. some PDF functions will not work without it.
-<br>
+
 
 ## Controls ##
 To Create
