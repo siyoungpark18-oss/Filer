@@ -14,7 +14,7 @@ from pypdf import PdfReader, PdfWriter
 #PATHS————————————————————————————————————————————————————————————————————————————————————————————————————
 CONFIG_PATH = Path.home() / ".tankobon" / "config.json"
 
-IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff',}
+IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff',} #DEFAULT IMAGE EXTENSIONS FOR MOST TOOLS
 
 SENTINEL = "\x00CANCELLED\x00"
 
@@ -795,6 +795,7 @@ def image_converter(config, cancel=None):
         return
 
     converter_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp'}
+    """MORE FILE FORMATS ARE ALLOWED. IMAGE CONVERTER IS MEANT TO TURN UN-IDEAL FILES INTER BETTER ONES"""
     all_files = list(src.rglob("*"))
     images = []
     skipped = []
