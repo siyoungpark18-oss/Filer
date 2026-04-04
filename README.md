@@ -55,7 +55,6 @@ i for documentation and resources
 **Log**
 + to Increase the size of Text in Log
 - to Decrease the size of Text in Log
-<br>
 Use the Scrollbar to Scroll in the Log, and hit Clear Log to clear all of its contents
 <br>
 <br>
@@ -64,7 +63,6 @@ Use the Scrollbar to Scroll in the Log, and hit Clear Log to clear all of its co
 ***The file system is organized into an Input and Output folder*** 
 The Input folder is where files are moved to for processing with the tools. *Files from the Input folder are copied from your file system*
   Do this using the **Add to Input** Button
-<br>
 The Output folder is where these files go to when they are processed. *Files from the Output folder are copied from the Input folder with their modifications*
   To export the processed files and move them back into your file system, use the **Open Output** Button
 <br>
