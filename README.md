@@ -45,9 +45,13 @@ Poppler is not packaged in as of yet. Please install it yourself. The program sh
 
 ## Controls ##
 **Main Bar**
+
 ☀ to switch between light and dark mode
+
 ? for Help
+
 i for documentation and resources
+
 ≡ for Preferences
 
 **Log**
