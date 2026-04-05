@@ -1,6 +1,6 @@
 #PREFERENCES——————————————————————————————————————————————————————————————————————————————————————————————————
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import messagebox, filedialog
 from pathlib import Path
 import re
 
@@ -58,6 +58,35 @@ KEY_LABELS = {
 }
 
 
+class FlatDropdown(tk.Frame):
+    def __init__(self, parent, variable, options, t, win, **kwargs):
+        super().__init__(parent, bg=t["btn_bg"], relief='flat', bd=0, **kwargs)
+        self._var = variable
+        self._opts = options
+        self._t = t
+        self._win = win
+
+        self._btn = tk.Label(self, textvariable=variable, bg=t["btn_bg"], fg=t["fg"],
+                             font=('', 8), padx=6, pady=2, cursor="hand2",
+                             relief='flat', width=16, anchor='w')
+        self._btn.pack(side='left')
+        self._btn.bind("<Button-1>", self._show_menu)
+
+        arr = tk.Label(self, text="▾", bg=t["btn_bg"], fg=t["hint_fg"],
+                       font=('', 8), cursor="hand2", padx=2)
+        arr.pack(side='left')
+        arr.bind("<Button-1>", self._show_menu)
+
+    def _show_menu(self, e=None):
+        t = self._t
+        menu = tk.Menu(self._win, tearoff=0, bg=t["bg"], fg=t["fg"],
+                       activebackground=t["hover"], activeforeground=t["fg"],
+                       relief='flat', bd=0, font=('', 8))
+        for opt in self._opts:
+            menu.add_command(label=opt, command=lambda o=opt: self._var.set(o))
+        menu.tk_popup(self._btn.winfo_rootx(), self._btn.winfo_rooty() + self._btn.winfo_height())
+
+
 def show_preferences(app):
     t = THEMES["light"]
     win = tk.Toplevel(app.root)
@@ -100,7 +129,7 @@ def show_preferences(app):
 
     for name in pages:
         lbl = tk.Label(sidebar, text=name, anchor='w', padx=12,
-                       bg=t["btn_bg"], fg=t["fg"], font=('', 10),
+                       bg=t["btn_bg"], fg=t["fg"], font=('', 8),
                        cursor="hand2")
         lbl.pack(fill='x', ipady=7)
         lbl.bind("<Button-1>", lambda e, n=name: show_tab(n))
@@ -141,12 +170,42 @@ def show_preferences(app):
             lbl_vals[key].insert(0, val if val else "")
             lbl_vals[key].configure(state='readonly')
 
+    _tip = [None]
+
+    def _show_pref_tip(widget, text):
+        if _tip[0]:
+            _tip[0].destroy()
+        x = widget.winfo_rootx() - win.winfo_rootx() + widget.winfo_width() + 4
+        y = widget.winfo_rooty() - win.winfo_rooty()
+        lbl = tk.Label(win, text=text, wraplength=220, justify='left',
+                       font=('Courier', 7), bg=t["bg"], fg=t["fg"], padx=6, pady=4)
+        lbl.place(x=x, y=y)
+        lbl.lift()
+        _tip[0] = lbl
+
+    def _hide_pref_tip():
+        if _tip[0]:
+            _tip[0].destroy()
+            _tip[0] = None
+
     def _pref_btn(parent, text, cmd):
         lbl = tk.Label(parent, text=text, bg=t["bg"], fg=t["fg"],
-                       font=('', 10), padx=6, cursor="hand2")
+                       font=('', 8), padx=6, cursor="hand2")
         lbl.bind("<Button-1>", lambda e: cmd())
         lbl.bind("<Enter>", lambda e: lbl.configure(bg=t["hover"]))
         lbl.bind("<Leave>", lambda e: lbl.configure(bg=t["bg"]))
+        return lbl
+
+    def _check_btn(parent, var):
+        lbl = tk.Label(parent, text="✓" if var.get() else " ",
+                       bg=t["btn_bg"], fg=t["fg"], font=('', 8),
+                       width=2, cursor="hand2")
+        def toggle(e):
+            var.set(not var.get())
+            lbl.configure(text="✓" if var.get() else " ")
+        lbl.bind("<Button-1>", toggle)
+        lbl.bind("<Enter>", lambda e: lbl.configure(bg=t["hover"]))
+        lbl.bind("<Leave>", lambda e: lbl.configure(bg=t["btn_bg"]))
         return lbl
 
     def _info_btn(parent, row, key, tips_dict, col=2):
@@ -155,16 +214,14 @@ def show_preferences(app):
                             font=('', 9), cursor="hand2", padx=2)
             info.grid(row=row, column=col, sticky='w')
             info.bind("<Enter>", lambda e, w=info, txt=tips_dict[key]: (
-                w.configure(bg=t["hover"]), app._show_tooltip_popup(w, txt, force_light=True)))
+                w.configure(bg=t["hover"]), _show_pref_tip(w, txt)))
             info.bind("<Leave>", lambda e, w=info: (
-                w.configure(bg=t["bg"]),
-                app._tooltip.destroy() if hasattr(app, '_tooltip') and app._tooltip else None
-            ))
+                w.configure(bg=t["bg"]), _hide_pref_tip()))
 
     # ── PATHS tab ──────────────────────────────────────────────────────────
     p = pages["Paths"]
     r = 0
-    tk.Label(p, text="Paths", font=('', 11, 'bold'), bg=t["bg"]).grid(
+    tk.Label(p, text="Paths", font=('', 8, 'bold'), bg=t["bg"]).grid(
         row=r, column=0, columnspan=2, sticky='w', pady=(0, 8))
     r += 1
 
@@ -177,11 +234,9 @@ def show_preferences(app):
                             font=('', 9), cursor="hand2", padx=2)
             info.pack(side='left', padx=(3, 0))
             info.bind("<Enter>", lambda e, w=info, txt=PATH_TIPS[key]: (
-                w.configure(bg=t["hover"]), app._show_tooltip_popup(w, txt, force_light=True)))
+                w.configure(bg=t["hover"]), _show_pref_tip(w, txt)))
             info.bind("<Leave>", lambda e, w=info: (
-                w.configure(bg=t["bg"]),
-                app._tooltip.destroy() if hasattr(app, '_tooltip') and app._tooltip else None
-            ))
+                w.configure(bg=t["bg"]), _hide_pref_tip()))
         r += 1
         e = tk.Entry(p, width=40, readonlybackground=t["entry_bg"])
         e.insert(0, paths[key].get())
@@ -239,64 +294,63 @@ def show_preferences(app):
     def build_fields(page, fields, start_row=1):
         for i, (key, label, typ, opts) in enumerate(fields):
             row = start_row + i
-            tk.Label(page, text=label, anchor='w', bg=t["bg"]).grid(
+            tk.Label(page, text=label, anchor='w', bg=t["bg"], font=('', 8)).grid(
                 row=row, column=0, sticky='w', pady=4, padx=(0, 16))
             _info_btn(page, row, key, PREF_TIPS)
             if typ == "check":
                 default = True if key in ("guide_empty_input", "show_tooltips") else False
                 v = tk.BooleanVar(value=bool(app.config.get(key, default)))
-                tk.Checkbutton(page, variable=v, bg=t["bg"]).grid(row=row, column=1, sticky='w')
+                _check_btn(page, v).grid(row=row, column=1, sticky='w')
             else:
                 raw_val = str(app.config.get(key, opts[0]))
                 val = raw_val if raw_val in opts else opts[0]
                 v = tk.StringVar(value=val)
-                ttk.Combobox(page, textvariable=v, values=opts,
-                             state='readonly', width=16).grid(row=row, column=1, sticky='w')
+                FlatDropdown(page, v, opts, t, win).grid(row=row, column=1, sticky='w')
             vars_[key] = v
 
     p = pages["General"]
-    tk.Label(p, text="General", font=('', 11, 'bold'), bg=t["bg"]).grid(
+    tk.Label(p, text="General", font=('', 8, 'bold'), bg=t["bg"]).grid(
         row=0, column=0, columnspan=2, sticky='w', pady=(0, 8))
     build_fields(p, general_fields)
 
     p = pages["Tools"]
-    tk.Label(p, text="Tools", font=('', 11, 'bold'), bg=t["bg"]).grid(
+    tk.Label(p, text="Tools", font=('', 8, 'bold'), bg=t["bg"]).grid(
         row=0, column=0, columnspan=2, sticky='w', pady=(0, 8))
     build_fields(p, tools_fields)
 
     p = pages["Hotkeys"]
-    tk.Label(p, text="Hotkeys", font=('', 11, 'bold'), bg=t["bg"]).grid(
+    tk.Label(p, text="Hotkeys", font=('', 8, 'bold'), bg=t["bg"]).grid(
         row=0, column=0, columnspan=2, sticky='w', pady=(0, 8))
     build_fields(p, hotkey_fields)
 
     p = pages["Throttle"]
-    tk.Label(p, text="Throttle", font=('', 11, 'bold'), bg=t["bg"]).grid(
+    tk.Label(p, text="Throttle", font=('', 8, 'bold'), bg=t["bg"]).grid(
         row=0, column=0, columnspan=2, sticky='w', pady=(0, 8))
     tk.Label(p, text="Limit resource usage during jobs.", fg=t["hint_fg"],
-             bg=t["bg"], font=('', 9)).grid(row=1, column=0, columnspan=2, sticky='w', pady=(0, 8))
+             bg=t["bg"], font=('', 8)).grid(row=1, column=0, columnspan=2, sticky='w', pady=(0, 8))
     build_fields(p, throttle_fields, start_row=2)
 
     # ── BUTTONS tab ────────────────────────────────────────────────────────
     p = pages["Buttons"]
-    tk.Label(p, text="Visible Buttons", font=('', 11, 'bold'), bg=t["bg"]).grid(
+    tk.Label(p, text="Visible Buttons", font=('', 8, 'bold'), bg=t["bg"]).grid(
         row=0, column=0, columnspan=2, sticky='w', pady=(0, 4))
     tk.Label(p, text="Toggle which tool buttons are visible in the sidebar.", fg=t["hint_fg"],
-             bg=t["bg"], font=('', 9)).grid(row=1, column=0, columnspan=2, sticky='w', pady=(0, 8))
+             bg=t["bg"], font=('', 8)).grid(row=1, column=0, columnspan=2, sticky='w', pady=(0, 8))
 
     btn_vars = {}
     for i, (key, section, label, _) in enumerate(app.TOGGLEABLE):
         v = tk.BooleanVar(value=bool(app.config.get(key, True)))
-        tk.Label(p, text=f"{label}  ({section})", anchor='w', bg=t["bg"]).grid(
+        tk.Label(p, text=f"{label}  ({section})", anchor='w', bg=t["bg"], font=('', 8)).grid(
             row=i + 2, column=0, sticky='w', pady=3)
-        tk.Checkbutton(p, variable=v, bg=t["bg"]).grid(row=i + 2, column=1, sticky='w')
+        _check_btn(p, v).grid(row=i + 2, column=1, sticky='w')
         btn_vars[key] = v
 
     # ── THEMES tab ────────────────────────────────────────────────────────
     p = pages["Themes"]
-    tk.Label(p, text="Themes", font=('', 11, 'bold'), bg=t["bg"]).grid(
+    tk.Label(p, text="Themes", font=('', 8, 'bold'), bg=t["bg"]).grid(
         row=0, column=0, columnspan=4, sticky='w', pady=(0, 4))
     tk.Label(p, text="Customise colours for light and dark mode. Type a 6-digit hex code.",
-             fg=t["hint_fg"], bg=t["bg"], font=('', 9)).grid(
+             fg=t["hint_fg"], bg=t["bg"], font=('', 8)).grid(
         row=1, column=0, columnspan=4, sticky='w', pady=(0, 8))
 
     theme_vars = {}
@@ -304,14 +358,14 @@ def show_preferences(app):
 
     headers = ["Key", "Light", "", "Dark", ""]
     for col, h in enumerate(headers):
-        tk.Label(p, text=h, font=('', 9, 'bold'), bg=t["bg"], fg=t["hint_fg"]).grid(
+        tk.Label(p, text=h, font=('', 8, 'bold'), bg=t["bg"], fg=t["hint_fg"]).grid(
             row=2, column=col, padx=(0 if col == 0 else 4, 0), sticky='w')
 
     saved_themes = app.config.get("themes", {})
 
     for i, key in enumerate(THEMES["light"].keys()):
         row = i + 3
-        tk.Label(p, text=KEY_LABELS.get(key, key), anchor='w', bg=t["bg"], font=('', 9)).grid(
+        tk.Label(p, text=KEY_LABELS.get(key, key), anchor='w', bg=t["bg"], font=('', 8)).grid(
             row=row, column=0, sticky='w', pady=2, padx=(0, 12))
 
         for col, mode in ((1, "light"), (3, "dark")):
@@ -320,7 +374,7 @@ def show_preferences(app):
             v = tk.StringVar(value=current)
             theme_vars.setdefault(mode, {})[key] = v
 
-            e = tk.Entry(p, textvariable=v, width=9, font=('Courier', 9),
+            e = tk.Entry(p, textvariable=v, width=9, font=('Courier', 8),
                          bg=t["entry_bg"], fg=t["entry_fg"])
             e.grid(row=row, column=col, sticky='w', padx=(0, 2))
 
@@ -341,7 +395,7 @@ def show_preferences(app):
 
     bottom_row = len(THEMES["light"].keys()) + 3
     reset_btn = tk.Label(p, text="Reset to Defaults", bg=t["bg"], fg=t["fg"],
-                         font=('', 9), cursor="hand2", padx=4)
+                         font=('', 8), cursor="hand2", padx=4)
     reset_btn.grid(row=bottom_row, column=0, columnspan=5, sticky='w', pady=(8, 0))
     reset_btn.bind("<Button-1>", lambda e: reset_themes())
     reset_btn.bind("<Enter>", lambda e: reset_btn.configure(bg=t["hover"]))
@@ -400,7 +454,7 @@ def show_preferences(app):
 
     for text, cmd in (("Cancel", win.destroy), ("Save", save)):
         lbl = tk.Label(sidebar, text=text, anchor='w', padx=12,
-                       bg=t["btn_bg"], fg=t["fg"], font=('', 10),
+                       bg=t["btn_bg"], fg=t["fg"], font=('', 8),
                        cursor="hand2")
         lbl.pack(fill='x', ipady=7, side='bottom')
         lbl.bind("<Button-1>", lambda e, c=cmd: c())
