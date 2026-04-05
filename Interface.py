@@ -298,7 +298,7 @@ class App:
             hint = f"  ({continue_key} = confirm  •  {cancel_key} = cancel)"
 
         tk.Label(self._input_frame, text=hint, fg=t["hint_fg"],
-                 bg=t["bg"], font=('Courier', 10)).pack(side='left')
+                 bg=t["bg"], font=('Courier', 7)).pack(side='left')
 
         var   = tk.StringVar()
         entry = tk.Entry(self._input_frame, textvariable=var, font=('Courier', 11),
@@ -348,10 +348,10 @@ class App:
                                          padx=10, pady=10)
         text.pack(fill='both', expand=True)
 
-        text.tag_configure("h1",   font=('Courier', 16, 'bold'))
-        text.tag_configure("h2",   font=('Courier', 12, 'bold'))
-        text.tag_configure("body", font=('Courier', 11))
-        text.tag_configure("dim",  font=('Courier', 10), foreground="gray")
+        text.tag_configure("h1",   font=('Courier', 13, 'bold'))
+        text.tag_configure("h2",   font=('Courier', 11, 'bold'))
+        text.tag_configure("body", font=('Courier', 10))
+        text.tag_configure("dim",  font=('Courier', 9), foreground="gray")
 
         def h1(s):   text.insert(tk.END, s + "\n", "h1")
         def h2(s):   text.insert(tk.END, s + "\n", "h2")
@@ -359,92 +359,23 @@ class App:
         def gap():   text.insert(tk.END, "\n")
 
         h1("Tankobon")
-        body("Controls")
+        h2("Controls")
         gap()
         body("☀ to switch between light and dark mode")
         body("? for help")
         body("i for documentation and resources")
         body("≡ for settings")
+        gap()
         body("For Information on specific tools or preferences, hover over the 'i' tooltips")
+        gap()
+        h2("Setup")
+        body("When you first begin the program, please set the directories for the Input and Output within your file system and give the application permissions to read/write files there for actual functionality")
+        gap()
+        h2("Intro")
         body("Tankobon is a file manager.")
         body("To be more specific, it's specialized for image management en masse. It's meant to manage, convert, and compress folders with images or individual images in the thousands at a time and to do this with speed.")
         gap()
         body("And with this comes its true Niche or intended use. Ultimately, Tankobon is a companion to large scale Manga Piracy. To those who wish to own and obtain manga from third party sources you may find that a multitude of reasons can impede time-efficient management of what could be thousands of manga pages, each stored as an individual image.")
-        gap()
-        body("Following is the explanation of the use cases for each tool within this Niche. I hope it's useful in these areas at the very least.")
-        gap()
-        gap()
-        h2("The Intended use of each tool")
-        gap()
-        h2("Folders to PDF")
-        body("This is a tool that quite unassumingly turns multiple folders into a PDF. However, this can be quite a feat to do manually when working with a manga.")
-        gap()
-        body("This tool is meant to be used to combine All or some of the individual chapters of a manga into a single pdf. Since chapters in a manga downloader such as Hakuneko or Mihon are downloaded individually, and a manga can have hundreds of chapters, this is a useful way to compress them into a single PDF if wanted.")
-        gap()
-        body("The PDF format is generally most useful for reading on monitors, provided were still talking about manga here.")
-        gap()
-        h2("Images to PDF")
-        body("A companion tool to folders to pdf. This tool is comparatively simple and simply requires you to input a folder with multiple images in it. The tool will create an output based on the input.")
-        gap()
-        h2("Folder Renamer")
-        body("The folder renamer renames files based on the number in its file name. If there are multiple numbers, it is no good.")
-        gap()
-        body("However, its main use case is with Manga chapters. When manga is downloaded its usual format is in an image set form with the images of individual chapters or volumes in a folder.")
-        gap()
-        body("Provided the naming conventions of the folders is simple and each folder is named by Chapter It can extract the number. This is useful in certain cases where the naming conventions are obscured by different scanlation groups.")
-        gap()
-        body("This program usually does nothing if there are no numbers available.")
-        gap()
-        h2("File Renamer")
-        body("A similar but different tool that also renames files. This is a general renaming tool which can replace certain parts of file names, add a prefix or suffix to the file name, or use the sequence function to sort by number.")
-        gap()
-        h2("Combine Image Sets")
-        body("This tool combines multiple folders of images into a single folder with all the images, preserving order.")
-        gap()
-        h2("Image Converter")
-        body("Can convert a ton of images to whatever format is on the list.")
-        gap()
-        h2("Find Duplicates")
-        body("Finds exact image duplicates of files by file hash.")
-        gap()
-        h2("PDF Combiner")
-        body("Combines multiple PDFs into one.")
-        gap()
-        h2("PDF Splitter")
-        body("Splits a PDF at page numbers you specify.")
-        gap()
-        h2("PDF to Images")
-        body("Converts a PDF into individual image files. Resource intensive.")
-        gap()
-        body("DPI settings are for printing, so there's no reason to use a DPI higher than the minimum usually.")
-        gap()
-        gap()
-        h1("Utility")
-        gap()
-        h2("Add Input")
-        body("Adds files or a folder to the input directory for processing.")
-        gap()
-        h2("Clear Input")
-        body("Clears the current input folder. Originals are not affected.")
-        gap()
-        h2("Status")
-        body("Displays what's currently in the input and output folders.")
-        gap()
-        h2("Clear Log")
-        body("Clears the log display.")
-        gap()
-        h2("Clear Output")
-        body("Clears the output folder.")
-        gap()
-        h2("Cancel Operation")
-        body("Cancels the currently running job.")
-        gap()
-        h2("Open Output")
-        body("Opens the output folder in Finder/Explorer.")
-        gap()
-        h2("Preferences (≡)")
-        body("Set paths, configure behaviour, defaults, throttles, and visible buttons.")
-        gap()
         gap()
         h1("Example Workflow")
         gap()
@@ -459,7 +390,6 @@ class App:
         gap()
 
         text.configure(state='disabled')
-        tk.Button(win, text="Close", command=win.destroy).pack(pady=8)
 
     def _show_docs(self):
         win = tk.Toplevel(self.root)
@@ -467,7 +397,7 @@ class App:
         win.geometry("600x620")
         win.resizable(False, False)
 
-        text = scrolledtext.ScrolledText(win, wrap='word', font=('Courier', 11),
+        text = scrolledtext.ScrolledText(win, wrap='word', font=('Courier', 8),
                                          padx=10, pady=10)
         text.pack(fill='both', expand=True)
 
@@ -492,22 +422,19 @@ class App:
         text.insert(tk.END, "\n")
         text.configure(state='disabled')
 
-        tk.Button(win, text="Close", command=win.destroy).pack(pady=8)
 
     # ── tooltips ──────────────────────────────────────────────────────────────
 
     def _show_tooltip(self, widget, text):
         def on_enter(e):
-            x = widget.winfo_rootx() + widget.winfo_width() + 4
-            y = widget.winfo_rooty()
-            self._tooltip = tk.Toplevel(self.root)
-            self._tooltip.wm_overrideredirect(True)
-            self._tooltip.wm_geometry(f"+{x}+{y}")
             t = self._theme()
-            lbl = tk.Label(self._tooltip, text=text, wraplength=220,
-                           justify='left', font=('Courier', 10),
-                           bg=t["btn_bg"], fg=t["fg"], padx=6, pady=4)
-            lbl.pack()
+            x = widget.winfo_rootx() - self.root.winfo_rootx() + widget.winfo_width() + 4
+            y = widget.winfo_rooty() - self.root.winfo_rooty()
+            self._tooltip = tk.Label(self.root, text=text, wraplength=220,
+                                     justify='left', font=('Courier', 7),
+                                     bg=t["bg"], fg=t["fg"], padx=6, pady=4)
+            self._tooltip.place(x=x, y=y)
+            self._tooltip.lift()
 
         def on_leave(e):
             if hasattr(self, '_tooltip') and self._tooltip:
@@ -520,19 +447,18 @@ class App:
     def _show_tooltip_popup(self, widget, text, force_light=False):
         if hasattr(self, '_tooltip') and self._tooltip:
             self._tooltip.destroy()
-        x = widget.winfo_rootx() + widget.winfo_width() + 4
-        y = widget.winfo_rooty()
-        self._tooltip = tk.Toplevel(self.root)
-        self._tooltip.wm_overrideredirect(True)
-        self._tooltip.wm_geometry(f"+{x}+{y}")
         t = THEMES["light"] if force_light else self._theme()
-        tk.Label(self._tooltip, text=text, font=('Courier', 10),
-                 bg=t["btn_bg"], fg=t["fg"], padx=6, pady=4).pack()
+        x = widget.winfo_rootx() - self.root.winfo_rootx() + widget.winfo_width() + 4
+        y = widget.winfo_rooty() - self.root.winfo_rooty()
+        self._tooltip = tk.Label(self.root, text=text, font=('Courier', 7),
+                                 bg=t["bg"], fg=t["fg"], padx=6, pady=4)
+        self._tooltip.place(x=x, y=y)
+        self._tooltip.lift()
 
     # ── ui build ──────────────────────────────────────────────────────────────
 
     def _build_ui(self):
-        self._log_font_size = 11
+        self._log_font_size = 8
 
         left = tk.Frame(self.root, width=200)
         left.pack(side='left', fill='y', padx=10, pady=10)
@@ -540,12 +466,12 @@ class App:
 
         title_row = tk.Frame(left)
         title_row.pack(fill='x', pady=(0, 2))
-        tk.Label(title_row, text="Tankobon", font=('', 11, 'bold')).pack(side='left')
+        tk.Label(title_row, text="Tankobon", font=('', 8, 'bold')).pack(side='left')
 
         def _mini_btn(parent, text_or_var, cmd, side='right', tooltip=None):
             t = self._theme()
             f = tk.Frame(parent, bg=t["fg"], padx=1, pady=1)
-            lbl = tk.Label(f, bg=t["bg"], fg=t["fg"], font=('', 10), width=0, cursor="hand2")
+            lbl = tk.Label(f, bg=t["bg"], fg=t["fg"], font=('', 7), width=0, cursor="hand2")
             if isinstance(text_or_var, str):
                 lbl.configure(text=text_or_var)
             lbl.pack()
@@ -592,7 +518,7 @@ class App:
         t = self._theme()
         self._input_status_lbl = tk.Label(
             status_row, text="[0 items]",
-            font=('Courier', 9), fg=t["hint_fg"], bg=t["bg"], anchor='w'
+            font=('Courier', 7), fg=t["hint_fg"], bg=t["bg"], anchor='w'
         )
         self._input_status_lbl.pack(side='left')
 
@@ -602,10 +528,11 @@ class App:
         self._right = tk.Frame(self.root)
         self._right.pack(side='left', fill='both', expand=True, padx=(0, 10), pady=10)
 
+
         log_header = tk.Frame(self._right)
         log_header.pack(fill='x')
 
-        tk.Label(log_header, text="Log", font=('', 11, 'bold')).pack(side='left')
+        tk.Label(log_header, text="Log", font=('', 8, 'bold')).pack(side='left')
         self._status_lbl = tk.Label(log_header, text="", font=('Courier', 9))
         self._status_lbl.pack(side='left', padx=(8, 0))
 
@@ -614,7 +541,7 @@ class App:
             self.log.configure(font=('Courier', self._log_font_size))
 
         for symbol, delta in (('+', 1), ('-', -1)):
-            btn = tk.Label(log_header, text=symbol, font=('', 10, 'bold'),
+            btn = tk.Label(log_header, text=symbol, font=('', 7, 'bold'),
                            bg=t["bg"], fg=t["fg"], padx=6, cursor="hand2")
             btn.pack(side='right', padx=(2, 0))
             btn.bind("<Button-1>", lambda e, d=delta: _change_font(d))
@@ -686,7 +613,7 @@ class App:
 
         for section_label, cmds in list(toggleable_sections.items()) + fixed_sections:
             tk.Label(self._btn_frame, text=section_label,
-                     font=('', 10, 'bold')).pack(anchor='w', pady=(8, 2))
+                     font=('', 7, 'bold')).pack(anchor='w', pady=(8, 2))
             for label, cmd in cmds:
                 self._make_button(self._btn_frame, label, cmd,
                                   tooltip=self.TOOLTIPS.get(label))
@@ -702,20 +629,20 @@ class App:
 
         for section_label, items in tool_rows.items():
             tk.Label(self._btn_frame, text=section_label,
-                     font=('', 10, 'bold'), bg=t["bg"], fg=t["fg"]
+                     font=('', 7, 'bold'), bg=t["bg"], fg=t["fg"]
                      ).pack(anchor='w', pady=(8, 2))
             for label, run_fn in items:
                 self._make_tool_accordion(self._btn_frame, label, run_fn)
 
         tk.Label(self._btn_frame, text="Input",
-                 font=('', 10, 'bold'), bg=t["bg"], fg=t["fg"]
+                 font=('', 7, 'bold'), bg=t["bg"], fg=t["fg"]
                  ).pack(anchor='w', pady=(8, 2))
         self._make_tool_accordion(self._btn_frame, "Add Input", self.pick_files)
         for label, cmd in [("Clear Input", self.clear_input), ("Open Input", self.open_input)]:
             self._make_button(self._btn_frame, label, cmd, tooltip=self.TOOLTIPS.get(label))
 
         tk.Label(self._btn_frame, text="Utility",
-                 font=('', 10, 'bold'), bg=t["bg"], fg=t["fg"]
+                 font=('', 7, 'bold'), bg=t["bg"], fg=t["fg"]
                  ).pack(anchor='w', pady=(8, 2))
         for label, cmd in [
             ("Status",       self.run_status),
@@ -733,7 +660,7 @@ class App:
 
         f = tk.Frame(row, bg=t["fg"], padx=1, pady=1)
         lbl = tk.Label(f, text=text, bg=t["bg"], fg=t["fg"],
-                       font=('', 10), width=22, cursor="hand2")
+                       font=('', 7), width=22, cursor="hand2")
         lbl.pack()
         lbl.bind("<Button-1>", lambda e: cmd())
         lbl.bind("<Enter>", lambda e: lbl.configure(bg=self._theme()["hover"]))
@@ -744,7 +671,7 @@ class App:
 
         if tooltip and self.config.get("show_tooltips", True):
             info = tk.Label(row, text="i", bg=t["bg"], fg=t["hint_fg"],
-                            font=('', 9), cursor="hand2", padx=2)
+                            font=('', 6), cursor="hand2", padx=2)
             info.pack(side='left', padx=(3, 0))
             info.bind("<Enter>", lambda e: info.configure(bg=self._theme()["hover"]))
             info.bind("<Leave>", lambda e: info.configure(bg=self._theme()["bg"]))
@@ -763,7 +690,7 @@ class App:
 
         hdr_f   = tk.Frame(hdr_row, bg=t["fg"], padx=1, pady=1)
         hdr_lbl = tk.Label(hdr_f, text=label, bg=t["bg"], fg=t["fg"],
-                           font=('', 10), width=22, cursor="hand2")
+                           font=('', 7), width=22, cursor="hand2")
         hdr_lbl.pack()
         hdr_f.pack(side='left')
 
@@ -771,7 +698,7 @@ class App:
 
         if self.config.get("show_tooltips", True) and label in self.TOOLTIPS:
             info = tk.Label(hdr_row, text="i", bg=t["bg"], fg=t["hint_fg"],
-                            font=('', 9), cursor="hand2", padx=2)
+                            font=('', 6), cursor="hand2", padx=2)
             info.pack(side='left', padx=(3, 0))
             info.bind("<Enter>", lambda e: info.configure(bg=self._theme()["hover"]))
             info.bind("<Leave>", lambda e: info.configure(bg=self._theme()["bg"]))
@@ -814,7 +741,7 @@ class App:
             hdr_lbl.configure(text=label)
             rbf = tk.Frame(hdr_row, bg=t["fg"], padx=1, pady=1)
             rbl = tk.Label(rbf, text="▶", bg=t["bg"], fg=t["fg"],
-                           font=('', 9), padx=5, cursor="hand2")
+                           font=('', 7), padx=5, cursor="hand2")
             rbl.pack()
             rbf.pack(side='right', padx=(4, 2))
             rbl.bind("<Button-1>", lambda e, fn=run_fn, jn=label:
@@ -834,13 +761,13 @@ class App:
                 row.pack(fill='x', pady=1, padx=(18, 0))
 
                 opt_lbl = tk.Label(row, text=opt_label, bg=t["bg"], fg=t["fg"],
-                                   font=('', 9), anchor='w')
+                                   font=('', 7), anchor='w')
                 opt_lbl.pack(side='left', fill='x', expand=True)
                 self._suboption_labels.setdefault(label, []).append(opt_lbl)
 
                 rbf = tk.Frame(row, bg=t["fg"], padx=1, pady=1)
                 rbl = tk.Label(rbf, text="▶", bg=t["bg"], fg=t["fg"],
-                               font=('', 9), padx=5, cursor="hand2")
+                               font=('', 7), padx=5, cursor="hand2")
                 rbl.pack()
                 rbf.pack(side='right', padx=(4, 2))
 
@@ -852,7 +779,7 @@ class App:
                 opt_lbl.bind("<Enter>", lambda e, b=opt_lbl: b.configure(bg=self._theme()["hover"]))
                 opt_lbl.bind("<Leave>", lambda e, b=opt_lbl: b.configure(bg=self._theme()["bg"]))
 
-    # ── preferences ───────────────────────────────────────────────────────────
+    # ── preferences / tabs ────────────────────────────────────────────────────
 
     def _show_preferences(self):
         show_preferences(self)
@@ -1139,6 +1066,8 @@ class App:
                 self._status_running = False
 
         self._run(_run, ignore_lock=True, job_name="Status")
+
+
 
 
 if __name__ == "__main__":
