@@ -220,6 +220,7 @@ def _cancel():
 
 
 def _print_summary(copied=0, failed=None, skipped=None, label="processed"):
+    start_section, end_section = _get_log_section_fns()
     parts = [f"  {label}: {copied}"]
     if failed:
         parts.append(f"Failed: {len(failed)}")
@@ -227,19 +228,17 @@ def _print_summary(copied=0, failed=None, skipped=None, label="processed"):
         parts.append(f"Skipped: {len(skipped)}")
     print("  " + "   ".join(parts))
     if failed:
-        print(f"  Failed files:")
-        for p, reason in failed[:10]:
+        start_section(f"  Failed files ({len(failed)})")
+        for p, reason in failed:
             print(f"    {p.name}: {reason}")
-        if len(failed) > 10:
-            print(f"    ... and {len(failed) - 10} more")
+        end_section()
     if skipped:
         non_type_skips = [(p, r) for p, r in skipped if r != "unsupported type"]
         if non_type_skips:
-            print(f"  Skipped files:")
-            for p, reason in non_type_skips[:10]:
+            start_section(f"  Skipped files ({len(non_type_skips)})")
+            for p, reason in non_type_skips:
                 print(f"    {p.name}: {reason}")
-            if len(non_type_skips) > 10:
-                print(f"    ... and {len(non_type_skips) - 10} more")
+            end_section()
         type_skips = len(skipped) - len(non_type_skips)
         if type_skips:
             print(f"  {type_skips} file(s) skipped (unsupported type)")
@@ -532,11 +531,11 @@ def folder_renamer(config, cancel=None):
         return
 
     print(f"  {len(preview)} folder(s) to rename{f', {len(skipped)} skipped' if skipped else ''}.")
-    print("  Preview (first 5):")
-    for old, new in preview[:5]:
+    start_section, end_section = _get_log_section_fns()
+    start_section(f"  Preview ({len(preview)})")
+    for old, new in preview:
         print(f"    {old.name}  →  {new.name}")
-    if len(preview) > 5:
-        print(f"    ... and {len(preview) - 5} more")
+    end_section()
 
     failed = []
     copied = 0
@@ -643,11 +642,11 @@ def file_renamer(config, cancel=None):
         print("")
         return
 
-    print("  Preview (first 5):")
-    for old, new in preview[:5]:
+    start_section, end_section = _get_log_section_fns()
+    start_section(f"  Preview ({len(preview)})")
+    for old, new in preview:
         print(f"    {old.name}  →  {new.name}")
-    if len(preview) > 5:
-        print(f"    ... and {len(preview) - 5} more")
+    end_section()
 
     copied = 0
     failed = []
@@ -756,7 +755,7 @@ def combine_image_sets(config, cancel=None):
                     total_failed.append((img, str(e)))
                 except Exception as e:
                     total_failed.append((img, str(e)))
-            print(f"    [{label}]  {len(images)} image(s)  →  {str(start_idx).zfill(4)}–{str(counter - 1).zfill(4)}")
+                print(f"    [{label}]  {len(images)} image(s)  →  {str(start_idx).zfill(4)}–{str(counter - 1).zfill(4)}")
         end_section()
 
     _print_summary(copied=counter - 1, failed=total_failed or None,
